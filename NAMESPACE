@@ -1,0 +1,3 @@
+#exportPattern("^[[:alpha:]]+")
+export(elicit, feedback, fitdist, plinearpool, plotfit, qlinearpool, roulette)
+import(graphics, grDevices, stats, utils, shiny)
