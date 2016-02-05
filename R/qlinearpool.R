@@ -1,3 +1,5 @@
+#' @export
+#' 
 qlinearpool <-
 function(fit, q, d = "best", w = 1){
 	

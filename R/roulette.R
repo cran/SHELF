@@ -1,3 +1,39 @@
+#' Elicit one set of probabilities using the roulette method.
+#' 
+#' Produces a graphics window with the roulette grid. The user clicks in the
+#' window to allocate 'chips' to 'bins'. The elicited probability inside each
+#' bin is the proportion of chips in each bin.
+#' 
+#' 
+#' @param lower The lower limit on the x-axis of the roulette grid.
+#' @param upper The upper limit on the x-axis of the roulette grid.
+#' @param gridheight The maximum number of chips that can be allocated to a
+#' single bin.
+#' @param nbins The number of equally sized bins drawn between \code{Lo} and
+#' \code{Up}.
+#' @param round.end If set to \code{T}, empty bins and the uppermost non-empty
+#' bin will be ignored. For example, with 20 chips in total, if the uppermost
+#' non-empty bin is [70,80] and contains 1 chip, setting \code{round.end = F}
+#' will result in an elicited probability P(X>80)=0, but setting
+#' \code{round.end = T} will remove this judgement, instead only having
+#' P(X>70)=0.05.
+#' @return A list, with outputs 
+#' \item{v }{ upper limits of
+#' each bin.}
+#' \item{p }{ cumulative probabilities for each
+#' upper bin limit.}
+#' @author Jeremy Oakley <j.oakley@@sheffield.ac.uk>
+#' @examples
+#' 
+#' \dontrun{
+#' x <- roulette()
+#' # Then allocate chips to bins
+#' 
+#' # To fit distributions and see the results
+#' myfit <- fitdist(vals = x$v, probs = x$p)
+#' plotfit(myfit)
+#' }
+#' @export
 roulette<-function(lower=0, upper=100, gridheight=10, nbins=10, round.end = F){
   
   chips<-rep(0,nbins)
