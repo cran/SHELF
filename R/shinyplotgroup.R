@@ -1,3 +1,4 @@
+
 shinyplotgroup<- function(fit, xl, xu, lpw){
   
   if(length(unique(fit$limits[,1]))>1 | length(unique(fit$limits[,2]))>1 ){stop("Parameter limits must be the same for each expert")}
@@ -51,8 +52,16 @@ shinyplotgroup<- function(fit, xl, xu, lpw){
     output$distPlot <- renderPlot({
       xlimits<-eval(parse(text=paste("c(",input$xlimits,")")))
       dist<-c("hist","normal", "t", "gamma", "lognormal", "logt","beta", "best")
-      if(is.null(input$lp)){show.lp<-F}else{show.lp<-T}
-      drawdensity(fit, d=dist[as.numeric(input$radio)], xl=xlimits[1], xu=xlimits[2], lp = show.lp, lpw = lpw )
+      if(is.null(input$lp)){
+        print(makeGroupPlot(fit, pl = xlimits[1], 
+                                 pu = xlimits[2], 
+                                 d=dist[as.numeric(input$radio)]))
+      }else{
+        print(makeLinearPoolPlot(fit, xl = xlimits[1], 
+                                 xu = xlimits[2], 
+                                 d=dist[as.numeric(input$radio)], w = lpw))
+      }
+     
     })
 }
 ))
