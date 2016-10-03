@@ -1,8 +1,8 @@
 Package: SHELF
 Type: Package
-Title: Tools to Support the Sheffield Elicitation Framework (SHELF)
-Version: 1.2.0
-Date: 2016-08-16
+Title: Tools to Support the Sheffield Elicitation Framework
+Version: 1.2.1
+Date: 2016-09-30
 Author: Jeremy Oakley
 Maintainer: Jeremy Oakley <j.oakley@sheffield.ac.uk>
 Description: Implements various methods for eliciting a probability distribution
@@ -22,6 +22,6 @@ URL: https://github.com/OakleyJ/SHELF
 BugReports: https://github.com/OakleyJ/SHELF/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2016-08-17 14:24:57 UTC; Jeremy
+Packaged: 2016-10-03 15:39:50 UTC; Jeremy
 Repository: CRAN
-Date/Publication: 2016-08-17 20:11:30
+Date/Publication: 2016-10-03 22:46:33

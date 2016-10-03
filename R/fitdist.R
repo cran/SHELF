@@ -78,8 +78,8 @@
 #' fitdist(vals=v, probs=p, lower=0)
 #' 
 #' # Two experts, different elicited quantiles and limits.
-#' # Expert 1: P(X<50)=0.25, P(X<60=0.5), P(X<65)=0.75, and provides bounds 10<X<100
-#' # Expert 2: P(X<40)=0.33, P(X<50=0.5), P(X<60)=0.66, and provides bounds 0<X
+#' # Expert A: P(X<50)=0.25, P(X<60=0.5), P(X<65)=0.75, and provides bounds 10<X<100
+#' # Expert B: P(X<40)=0.33, P(X<50=0.5), P(X<60)=0.66, and provides bounds 0<X
 #' v <- matrix(c(50,60,65,40,50,60),3,2)
 #' p <- matrix(c(.25,.5,.75,.33,.5,.66),3,2)
 #' l <- c(10,0)
@@ -110,10 +110,16 @@ function(vals, probs, lower = -Inf, upper = Inf, weights = 1, tdf = 3){
 	logt.parameters <- matrix(NA, n.experts, 3)
 	beta.parameters <- matrix(NA, n.experts, 2)
 	ssq<-matrix(NA, n.experts, 6)
-	expertnames <- paste("expert.", LETTERS[1:n.experts], sep="")
+	
+	
+	if(n.experts > 1){
+	  expertnames <- paste("expert.", LETTERS[1:n.experts], sep="")
+	  }else{expertnames <- NULL
+	  }
 	
 	limits <- data.frame(lower = lower, upper = upper)
 	row.names(limits) <- expertnames
+	
 	
 	for(i in 1:n.experts){
 		if (min(probs[,i]) > 0.4 ){stop("smallest elicited probability must be less than 0.4")}
