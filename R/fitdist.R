@@ -128,7 +128,7 @@ function(vals, probs, lower = -Inf, upper = Inf, weights = 1, tdf = 3){
     if (min(vals[,i]) < lower[i]){stop("elicited parameter values cannot be smaller than lower parameter limit")}
 		if (max(vals[,i]) > upper[i]){stop("elicited parameter values cannot be greater than upper parameter limit")}
 		if (tdf[i] <= 0 ){stop("Student-t degrees of freedom must be greater than 0")}
-		if (min(probs[-1,i] - probs[-nrow(probs),i]) <= 0 ){stop("probabilities must be specified in ascending order")}
+		if (min(probs[-1,i] - probs[-nrow(probs),i]) < 0 ){stop("probabilities must be specified in ascending order")}
 		if (min(vals[-1,i] - vals[-nrow(vals),i]) <= 0 ){stop("parameter values must be specified in ascending order")}
     
 	  minprob <- min(probs[, i])
