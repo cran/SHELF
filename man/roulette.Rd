@@ -4,8 +4,7 @@
 \alias{roulette}
 \title{Elicit one set of probabilities using the roulette method.}
 \usage{
-roulette(lower = 0, upper = 100, gridheight = 10, nbins = 10,
-  round.end = T)
+roulette(lower = 0, upper = 100, gridheight = 10, nbins = 10)
 }
 \arguments{
 \item{lower}{The lower limit on the x-axis of the roulette grid.}
@@ -17,13 +16,6 @@ single bin.}
 
 \item{nbins}{The number of equally sized bins drawn between \code{Lo} and
 \code{Up}.}
-
-\item{round.end}{If set to \code{TRUE}, empty bins and the uppermost non-empty
-bin will be ignored. For example, with 20 probs in total, if the uppermost
-non-empty bin is [70,80] and contains 1 prob, setting \code{round.end = FALSE}
-will result in an elicited probability P(X>80)=0, but setting
-\code{round.end = TRUE} will remove this judgement, instead only having
-P(X>70)=0.05.}
 }
 \value{
 A list, with outputs 
@@ -33,9 +25,16 @@ each bin.}
 upper bin limit.}
 }
 \description{
-Produces a graphics window with the roulette grid. The user clicks in the
-window to allocate 'probs' to 'bins'. The elicited probability inside each
+Opens a shiny app for the roulette elicitation method. The user clicks in the
+grid to allocate 'probs' to 'bins'. The elicited probability inside each
 bin is the proportion of probs in each bin.
+}
+\note{
+Regarding the option ``spread end probs over empty bins'' 
+(unchecked as the default): suppose for example, the leftmost and rightmost non-empty
+bins are [10,20] and [70,80], and each contain one prob, with 20 probs used in total. If the option
+is unchecked, it is assumed P(X<20) = P(X>70) = 0.05 and P(X<10) = P(X>80) = 0. If the option
+is checked, it is assumed P(X<20) = P(X>70) = 0.05 only.
 }
 \examples{
 
@@ -51,4 +50,3 @@ plotfit(myfit)
 \author{
 Jeremy Oakley <j.oakley@sheffield.ac.uk>
 }
-

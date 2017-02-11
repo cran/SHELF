@@ -1,7 +1,7 @@
 #' Elicit one set of probabilities using the roulette method.
 #' 
-#' Produces a graphics window with the roulette grid. The user clicks in the
-#' window to allocate 'probs' to 'bins'. The elicited probability inside each
+#' Opens a shiny app for the roulette elicitation method. The user clicks in the
+#' grid to allocate 'probs' to 'bins'. The elicited probability inside each
 #' bin is the proportion of probs in each bin.
 #' 
 #' 
@@ -11,17 +11,19 @@
 #' single bin.
 #' @param nbins The number of equally sized bins drawn between \code{Lo} and
 #' \code{Up}.
-#' @param round.end If set to \code{TRUE}, empty bins and the uppermost non-empty
-#' bin will be ignored. For example, with 20 probs in total, if the uppermost
-#' non-empty bin is [70,80] and contains 1 prob, setting \code{round.end = FALSE}
-#' will result in an elicited probability P(X>80)=0, but setting
-#' \code{round.end = TRUE} will remove this judgement, instead only having
-#' P(X>70)=0.05.
 #' @return A list, with outputs 
 #' \item{v }{ upper limits of
 #' each bin.}
 #' \item{p }{ cumulative probabilities for each
 #' upper bin limit.}
+#' 
+#' @note Regarding the option ``spread end probs over empty bins'' 
+#' (unchecked as the default): suppose for example, the leftmost and rightmost non-empty
+#' bins are [10,20] and [70,80], and each contain one prob, with 20 probs used in total. If the option
+#' is unchecked, it is assumed P(X<20) = P(X>70) = 0.05 and P(X<10) = P(X>80) = 0. If the option
+#' is checked, it is assumed P(X<20) = P(X>70) = 0.05 only. 
+#' 
+#' 
 #' @author Jeremy Oakley <j.oakley@@sheffield.ac.uk>
 #' @examples
 #' 
@@ -35,7 +37,7 @@
 #' }
 #' @export
 
-roulette <- function(lower=0, upper=100, gridheight=10, nbins=10, round.end = T){
+roulette <- function(lower=0, upper=100, gridheight=10, nbins=10){
   
   bin.width<-(upper-lower)/nbins
   bin.left<-seq(from=lower,to=upper-bin.width,length=nbins)
@@ -45,6 +47,7 @@ roulette <- function(lower=0, upper=100, gridheight=10, nbins=10, round.end = T)
   ui <- fluidPage(
     titlePanel("Roulette elicitation"),
     sidebarPanel(checkboxInput("fit", "Show fit", FALSE),
+                 checkboxInput("round.end", "Spread end probs over empty bins", FALSE),
                  radioButtons("radio", label = h5("Distribution"), choices = list("Normal" = 2, 
                                                                                   "Student t" = 3, 
                                                                                   "Gamma" = 4, 
@@ -53,8 +56,10 @@ roulette <- function(lower=0, upper=100, gridheight=10, nbins=10, round.end = T)
                                                                                   "Beta" = 7, 
                                                                                   "Best fitting" =8), selected = 2 ),
                  numericInput("tdf", label = h5("Student-t degrees of freedom"), value = 3),
-                 numericInput("fq1", label = h5("lower feedback quantile"), value = 0.05,min=0,max=1),
-                 numericInput("fq2", label = h5("upper feedback quantile"), value = 0.95,min=0,max=1),
+                 numericInput("fq1", label = h5("lower feedback quantile"), value = 0.05,
+                              min = 0, max = 1, step = 0.01),
+                 numericInput("fq2", label = h5("upper feedback quantile"), value = 0.95, 
+                              min = 0, max = 1, step = 0.01),
                  actionButton("exit", "Finish")),
     mainPanel(plotOutput("plot1", click = "location"),
               plotOutput("plot2"))
@@ -67,8 +72,10 @@ roulette <- function(lower=0, upper=100, gridheight=10, nbins=10, round.end = T)
     observeEvent(input$location, {
       vals$x <-input$location$x
       vals$y <-input$location$y
+
+      
       if(vals$x > lower & vals$x <upper & vals$y < gridheight){
-        index<-ceiling(vals$x/upper*nbins)
+        index <- which(vals$x >= bin.left & vals$x < bin.right)
         vals$probs[index]<-ceiling(max(vals$y,0))
         vals$p <- cumsum(vals$probs)/sum(vals$probs)
         vals$v <- bin.right
@@ -79,7 +86,7 @@ roulette <- function(lower=0, upper=100, gridheight=10, nbins=10, round.end = T)
         }
       }) 
       
-      if(round.end == T){
+      if(input$round.end == T){
         index <- vals$p>0 & vals$p<1
         vals$v <- vals$v[index]
         vals$p <- vals$p[index]
@@ -118,8 +125,18 @@ roulette <- function(lower=0, upper=100, gridheight=10, nbins=10, round.end = T)
     })
     
     output$plot2 <- renderPlot({
-      if(sum(vals$probs >0) >2 & input$fit){
-        myfit <-fitdist(vals$v, vals$p, lower, upper)
+      if((sum(vals$probs >0) >2 & input$fit & input$round.end) | 
+         (sum(vals$probs >0) >=2 & input$fit & !input$round.end)){
+        if(input$round.end){
+          myfit <-fitdist(vals$v, vals$p, lower, upper)}else{
+            
+            newvals <- c(lower, vals$v)
+            newprobs <- c(0, vals$p)
+            i1 <- max(which(newprobs == 0))
+            i2 <- match(1, newprobs)
+            
+            myfit <-fitdist(newvals[i1:i2], newprobs[i1:i2] , lower, upper)
+          }
         dist<-c("hist","normal", "t", "gamma", "lognormal", "logt","beta", "best")
         plotfit(myfit, d=dist[as.numeric(input$radio)], int = F, ql=input$fq1, qu=input$fq2, xl = lower, xu = upper)
         
