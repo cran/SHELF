@@ -14,8 +14,8 @@ roulette(lower = 0, upper = 100, gridheight = 10, nbins = 10)
 \item{gridheight}{The maximum number of probs that can be allocated to a
 single bin.}
 
-\item{nbins}{The number of equally sized bins drawn between \code{Lo} and
-\code{Up}.}
+\item{nbins}{The number of equally sized bins drawn between \code{lower} and
+\code{upper}.}
 }
 \value{
 A list, with outputs 
