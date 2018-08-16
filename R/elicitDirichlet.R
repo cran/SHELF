@@ -21,6 +21,8 @@
 #' elicited marginals.
 #' @param plotBeta logical. Plot the original elicited marginals and the fitted marginals from the 
 #' Dirichlet fit. 
+#' @param xlab x-axis label on the marginal distribution plot.
+#' @param ylab y-axis label on the marginal distribution plot.
 #
 
 #' @return The parameters of the fitted Dirichlet distribution.
@@ -51,7 +53,9 @@
 fitDirichlet <- function(...,
                          categories = NULL,
                          n.fitted = "opt",
-                         plotBeta = TRUE) {
+                         plotBeta = TRUE,
+                         xlab = "x",
+                         ylab = expression(f[X](x))) {
   
   Category <- x <- fx <- parameters<- NULL # hack to avoid R CMD check NOTE
   
@@ -107,7 +111,7 @@ fitDirichlet <- function(...,
                          key = Category,
                          value = fx,-x,
                          factor_key = TRUE)
-    df1 <- data.frame(df1, parameters = "original")
+    df1 <- data.frame(df1, parameters = "elicited")
    
     marginal.parameters <- rbind(dirichlet.parameters,
                                  n.d - dirichlet.parameters)
@@ -120,15 +124,14 @@ fitDirichlet <- function(...,
                          key = Category,
                          value = fx,-x,
                          factor_key = TRUE)
-    df2 <- data.frame(df2, parameters = "dirichlet fit")
+    df2 <- data.frame(df2, parameters = "Dirichlet fit")
     
     df.all <- rbind(df1, df2)
     
     p1 <- ggplot(df.all, aes(x = x, y = fx)) +
       geom_line(aes(colour = parameters)) +
       facet_wrap(~ Category, ncol = 1) +
-      labs(colour = " Marginal \n distributions") +
-      ylab(expression(f[X](x)))
+      labs(colour = " Marginal \n distributions", x = xlab, y = ylab) 
     print(p1)
   }
   
