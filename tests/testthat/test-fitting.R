@@ -144,11 +144,26 @@ test_that("precision fitting works - normal",{
   a <- 3
   b <- 4
   sigmasq <- 1 / qgamma(c(0.05, 0.95), a, b)
-  probs <- pnorm(rep(med + k, 2), med, sigmasq^0.5) - 0.5
-  pfit <- fitprecision(c(med, med + k), probs, pplot = F)
-  gamma.parameters <- unlist(pfit$Gamma)
-  attributes(gamma.parameters) <- NULL
-  expect_equal(gamma.parameters, c(a, b), tolerance = 1e-4)
+  probs1 <- pnorm(rep(med + k, 2), med, sigmasq^0.5) - 0.5
+  pfit1 <- fitprecision(c(med, med + k), probs1, pplot = F)
+  gamma.parameters1 <- unlist(pfit1$Gamma)
+  attributes(gamma.parameters1) <- NULL
+  expect_equal(gamma.parameters1, c(a, b), tolerance = 1e-4)
+  
+  probs2 <- pnorm(rep(med - k, 2), med, sigmasq^0.5) 
+  pfit2 <- fitprecision(c(-Inf, med - k), probs2, med = med,
+                        pplot = F)
+  gamma.parameters2 <- unlist(pfit2$Gamma)
+  attributes(gamma.parameters2) <- NULL
+  expect_equal(gamma.parameters2, c(a, b), tolerance = 1e-4)
+  
+  probs3 <- 1 - pnorm(rep(med + k, 2), med, sigmasq^0.5) 
+  pfit3 <- fitprecision(c(med + k, Inf), probs3, med = med,
+                        pplot = F)
+  gamma.parameters3 <- unlist(pfit3$Gamma)
+  attributes(gamma.parameters3) <- NULL
+  expect_equal(gamma.parameters3, c(a, b), tolerance = 1e-4)
+  
 })
 
 test_that("precision fitting works - lognormal",{
@@ -159,10 +174,92 @@ test_that("precision fitting works - lognormal",{
   a <- 3
   b <- 4
   sigmasq <- 1 / qgamma(c(0.05, 0.95), a, b)
-  probs <- plnorm(rep(med + k, 2), log(med), sigmasq^0.5) - 0.5
-  pfit <- fitprecision(interval = c(med, med + k), propvals = probs,
+  
+  probs1 <- plnorm(rep(med + k, 2), log(med), sigmasq^0.5) - 0.5
+  pfit1 <- fitprecision(interval = c(med, med + k), propvals = probs1,
                        trans = "log", pplot = F)
-  gamma.parameters <- unlist(pfit$Gamma)
-  attributes(gamma.parameters) <- NULL
-  expect_equal(gamma.parameters, c(a, b), tolerance = 1e-4)
+  gamma.parameters1 <- unlist(pfit1$Gamma)
+  attributes(gamma.parameters1) <- NULL
+  expect_equal(gamma.parameters1, c(a, b), tolerance = 1e-4)
+  
+  probs2 <- plnorm(rep(med - k, 2), log(med), sigmasq^0.5) 
+  pfit2 <- fitprecision(interval = c(-Inf, med - k), propvals = probs2,
+                        med = med, 
+                        trans = "log", pplot = F)
+  gamma.parameters2 <- unlist(pfit2$Gamma)
+  attributes(gamma.parameters2) <- NULL
+  expect_equal(gamma.parameters2, c(a, b), tolerance = 1e-4)
+  
+  probs3 <- 1 - plnorm(rep(med + k, 2), log(med), sigmasq^0.5) 
+  pfit3 <- fitprecision(interval = c(med + k, Inf), propvals = probs3,
+                        med = med, 
+                        trans = "log", pplot = F)
+  gamma.parameters3 <- unlist(pfit3$Gamma)
+  attributes(gamma.parameters3) <- NULL
+  expect_equal(gamma.parameters3, c(a, b), tolerance = 1e-4)
+})
+
+
+test_that("linear pooling works",{
+  skip_on_cran()
+  #p1 <- c(runif(1, 0.1, 0.4), 0.5, runif(1, 0.6, 0.9))
+  p1 <- c(0.25, 0.5, 0.75)
+  a <- 10; b <- 4
+  v1 <- qgamma(p1, a, b)
+  mu <- 3 ; sigma <- 2
+  v2 <- qnorm(p1, mu, sigma)
+  v3 <- qlnorm(p1, log(mu), sigma)
+  V <- matrix(c(v1, v2, v3), 3, 3)
+  myfit <- fitdist(vals = V, probs = p1, lower = 0)
+  
+  w1 <- 1/6; w2 <- 2/6; w3 <- 3/6
+  xtest <- 1.5
+  qu <- 0.95
+  
+  qlp <- qlinearpool(myfit, qu, w = c(w1, w2, w3))
+  qcheck <- w1 * pgamma(qlp, a, b) + 
+    w2 * pnorm(qlp, mu, sigma) +
+    w3 * plnorm(qlp, log(mu), sigma)
+  expect_equal(qcheck, qu , tolerance = 1e-4)
+  
+  expect_equal(plinearpool(myfit, qlp, w = c(w1, w2, w3)),
+               qu , tolerance = 1e-4)
+  
+  plp <- plinearpool(myfit, x = xtest, w = c(w1, w2, w3))
+  pcheck <- w1 * pgamma(xtest, a, b) + 
+    w2 * pnorm(xtest, mu, sigma) +
+    w3 * plnorm(xtest, log(mu), sigma)
+  expect_equal(plp, pcheck , tolerance = 1e-4)
+})
+
+test_that("linear pooling works - different lower limits",{
+  skip_on_cran()
+  llimits <- c(-2, 1, -4)
+  p1 <- c(0.25, 0.5, 0.6, 0.75)
+  a <- 10; b <- 4
+  v1 <- llimits[1] + qgamma(p1, a, b)
+  mu <- 3 ; sigma <- 2
+  v2 <- llimits[2] + qlnorm(p1, log(mu), sigma)
+  v3 <- llimits[3] + exp(1 + 2 * qt(p1, 3))
+  V <- matrix(c(v1, v2, v3), length(p1), 3)
+  myfit <- fitdist(vals = V, probs = p1, lower = llimits)
+  
+  w1 <- 1/6; w2 <- 2/6; w3 <- 3/6
+  xtest <- 3
+  qu <- 0.01
+  
+  qlp <- qlinearpool(myfit, qu, w = c(w1, w2, w3))
+  qcheck <- w1 * pgamma(qlp - llimits[1], a, b) + 
+    w2 * plnorm(qlp - llimits[2], log(mu), sigma) +
+    w3 * pt((log(qlp - llimits[3]) - 1) / 2 , 3)
+  expect_equal(qcheck, qu , tolerance = 1e-4)
+  
+  expect_equal(plinearpool(myfit, qlp, w = c(w1, w2, w3)),
+               qu , tolerance = 1e-4)
+  
+  plp <- plinearpool(myfit, x = xtest, w = c(w1, w2, w3))
+  pcheck <- w1 * pgamma(xtest - llimits[1], a, b) + 
+    w2 * plnorm(xtest - llimits[2], log(mu), sigma) +
+    w3 * pt((log(xtest - llimits[3]) - 1) / 2, 3)
+  expect_equal(plp, pcheck , tolerance = 1e-4)
 })

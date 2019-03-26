@@ -137,14 +137,15 @@ function(vals, probs, lower = -Inf, upper = Inf, weights = 1, tdf = 3){
     
 	  minprob <- min(probs[, i])
 	  maxprob <- max(probs[, i])
+	  minvals <- min(vals[, i])
+	  maxvals <- max(vals[, i])
 		
 	  q.fit <- approx(x = probs[,i], y = vals[,i], xout = c(0.4, 0.5, 0.6))$y
 	  l <- q.fit[1] # estimated 40th percentile on original scale
 	  u <- q.fit[3] # estimated 60th percentile on original scale
 	  
 	  if(minprob > 0 & maxprob < 1){
-		  minvals <- min(vals[, i])
-		  maxvals <- max(vals[, i])
+
 		  minq <- qnorm(minprob)
 		  maxq <- qnorm(maxprob)
 		  # Estimate m and v assuming X~N(m,v)
@@ -161,6 +162,8 @@ function(vals, probs, lower = -Inf, upper = Inf, weights = 1, tdf = 3){
 		                    weights = weights[,i])   
     normal.parameters[i,] <- c(normal.fit$par[1], exp(normal.fit$par[2]))
     ssq[i,1] <- normal.fit$value
+    
+    # starting values: c(m, log((u - m)/ qt(0.6, tdf[i])))
 	
 		t.fit <- optim(c(m, 0.5*log(v)), t.error, 
 		               values = vals[,i], 
@@ -184,13 +187,19 @@ function(vals, probs, lower = -Inf, upper = Inf, weights = 1, tdf = 3){
     		ssq[i,3] <- gamma.fit$value
     		
     		std<-((log(u - lower[i])-log(l - lower[i]))/1.35)
-    	
-    		lognormal.fit <- optim(c(log(m.scaled1), log(std)), 
+    		
+    		mlog <- (log(minvals - lower[i]) * 
+    		           maxq - log(maxvals - lower[i]) * minq) /
+    		  (maxq - minq)
+    		
+    		lognormal.fit <- optim(c(mlog,
+    		                         log(std)), 
     		                       lognormal.error, 
     		                       values = vals.scaled1, 
     		                       probabilities = probs[,i], 
     		                       weights = weights[,i])
-    		lognormal.parameters[i, 1:2] <- c(lognormal.fit$par[1], exp(lognormal.fit$par[2]))
+    		lognormal.parameters[i, 1:2] <- c(lognormal.fit$par[1],
+    		                                  exp(lognormal.fit$par[2]))
     		ssq[i,4] <- lognormal.fit$value
     	
     		logt.fit <- optim(c(log(m.scaled1), log(std)), 

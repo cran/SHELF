@@ -9,11 +9,20 @@ function(fit, d = "best", ex = 1, pl, pu, ql = NULL, qu = NULL, nx = 200){
 	if(d == "best"){
 		best.index <- which.min(fit$ssq[ex, ])
 	}
-	index<-switch(which(d==c("normal", "t", "gamma", "lognormal", "logt","beta", "hist", "best")), 1, 2, 3, 4, 5, 6, 7, best.index)
+	index <- switch(which(d==c("normal",
+	                           "t",
+	                           "gamma",
+	                           "lognormal",
+	                           "logt",
+	                           "beta",
+	                           "hist",
+	                           "best")),
+	                1, 2, 3, 4, 5, 6, 7,
+	                best.index)
 	
 		
 	if(index==1){
-		fx <- dnorm(x, fit$Normal[ex,1], fit$Normal[ex,2]) 		
+		fx <- dnorm(x, fit$Normal[ex,1], fit$Normal[ex,2]) 
 	}
 	
 	if(index==2){
@@ -35,8 +44,8 @@ function(fit, d = "best", ex = 1, pl, pu, ql = NULL, qu = NULL, nx = 200){
 	if(index==5){
 		xl <- fit$limits[ex,1]
 		if(xl == -Inf){xl <- 0}
-		fx <- dt( (log(x - xl) - fit$Log.Student.t[ex,1]) / fit$Log.Student.t[ex,2], fit$Log.Student.t[ex,3]) / ((x - xl) * fit$Log.Student.t[ex,2])
-    fx[is.nan(fx)]<-0
+		fx <- dt( (log(abs(x - xl)) - fit$Log.Student.t[ex,1]) / fit$Log.Student.t[ex,2], fit$Log.Student.t[ex,3]) / ((x - xl) * fit$Log.Student.t[ex,2])
+    fx[x<= xl] <- 0 # Hack to avoid NaN
     
 	}
 		
@@ -49,8 +58,13 @@ function(fit, d = "best", ex = 1, pl, pu, ql = NULL, qu = NULL, nx = 200){
 	}
 
 	if(index==7){
-
-	  fx <- dhist(x,fit$vals[ex,], fit$probs[ex,])}
+	 
+	  fx <- dhist(x, c(fit$limits[ex, 1],
+	                   fit$vals[ex,],
+	                   fit$limits[ex, 2]),
+	              c(0, fit$probs[ex, ],1))
+	  fx[length(fx)] <- 0
+	  }
 
  
 list(x = x, fx = fx)	

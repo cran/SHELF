@@ -1,6 +1,9 @@
 makeSingleExpertPlot <-
-function(fit, d = "best", pl = -Inf, pu = Inf, ql = NA, qu = NA, sf = 3, ex = 1,
-         lwd = 1, xlab, ylab){
+function(fit, d = "best", pl = -Inf, pu = Inf,
+         ql = NA, qu = NA, sf = 3, ex = 1,
+         lwd = 1, xlab, ylab, percentages ){
+  
+  
   
 	if(d == "best"){
 		ssq <- fit$ssq[ex, is.na(fit$ssq[ex,])==F]
@@ -162,7 +165,7 @@ function(fit, d = "best", pl = -Inf, pu = Inf, ql = NA, qu = NA, sf = 3, ex = 1,
 		
 		fx <-  1/(xu - xl) * dbeta( (x - xl) / (xu - xl), fit$Beta[ex,1], fit$Beta[ex,2])
 		
-		dist.title = main=paste("Beta(",
+		dist.title =paste("Beta(",
 		                        signif(fit$Beta[ex,1], sf),
 		                        ", ", signif(fit$Beta[ex,2], sf),
 		                        ")", sep="")
@@ -222,7 +225,6 @@ function(fit, d = "best", pl = -Inf, pu = Inf, ql = NA, qu = NA, sf = 3, ex = 1,
 	df1 <- data.frame(x = x, fx = fx)
 	p1 <- ggplot(df1, aes(x = x, y = fx)) +
 	  geom_line(size = lwd) +
-	  xlim(pl, pu) + 
 	  labs(title = dist.title, x = xlab, y = ylab )+
 	  theme(plot.title = element_text(hjust = 0.5))
 	if(is.na(ql) == F  ){
@@ -237,5 +239,13 @@ function(fit, d = "best", pl = -Inf, pu = Inf, ql = NA, qu = NA, sf = 3, ex = 1,
 	                         fill = "red",
 	                         alpha = 0.5)
 	}
+	
+	if(percentages){
+	  p1 <- p1 + scale_x_continuous(labels = scales::percent,  
+	                                limits = c(pl, pu))
+	}else{
+	  p1 <- p1 + xlim(pl, pu)
+	}
+	
 	p1
 }
