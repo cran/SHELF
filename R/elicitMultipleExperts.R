@@ -34,19 +34,29 @@ elicitMultiple <- function(){
         wellPanel(
           numericInput("nExperts", label = h5("Number of experts"),
                        value = 2, min = 1),
+          radioButtons("entry", "Input method", 
+                       choices = c("Quantiles", "Roulette")),
+          conditionalPanel(
+            condition = "input.entry == 'Quantiles'",
           textInput("probs", label = h5("Cumulative probabilities"), 
-                    value = "0.25, 0.5, 0.75"),
-          selectInput("dist", label = "Distribution", 
-                      choices =  list(Histogram = "hist",
-                                      Normal = "normal", 
-                                      'Student-t' = "t",
-                                      Gamma = "gamma",
-                                      'Log normal' = "lognormal",
-                                      'Log Student-t' = "logt",
-                                      Beta = "beta", 
-                                      'Best fitting' = "best"))
+                    value = "0.25, 0.5, 0.75")),
+          conditionalPanel(
+            condition = "input.entry == 'Roulette'",
+            numericInput("nBins", label = h5("Number of bins"), value = 10),
+            textInput("limits", label = h5("Parameter limits"), value = "0, 100")
+                 )
           ),
           wellPanel(
+            selectInput("dist", label = "Distribution", 
+                        choices =  list(Histogram = "hist",
+                                        Normal = "normal", 
+                                        'Student-t' = "t",
+                                        Gamma = "gamma",
+                                        'Log normal' = "lognormal",
+                                        'Log Student-t' = "logt",
+                                        Beta = "beta", 
+                                        'Best fitting' = "best")),
+            uiOutput("setPDFxaxisLimits"),
           checkboxGroupInput("lp", label = h5("Linear pool"), 
                              choices = list("Display linear pool" = 1)),
           conditionalPanel(
@@ -57,10 +67,8 @@ elicitMultiple <- function(){
           checkboxInput("showfeedback", label = "Show feedback", value = FALSE),
           conditionalPanel(
             condition = "input.showfeedback == true",
-            numericInput("fq1", label = h5("lower feedback quantile"), 
-                         value = 0.05,min=0,max=1),
-            numericInput("fq2", label = h5("upper feedback quantile"),
-                         value = 0.95,min=0,max=1)
+            textInput("fq", label = h5("Feedback quantiles"), 
+                      value = "0.05, 0.95")
             )
           )
         )
@@ -92,18 +100,54 @@ elicitMultiple <- function(){
         
         tabsetPanel(
           tabPanel("Judgements",
-                   helpText("Enter the judgements in the table below,
+                   conditionalPanel(
+                     condition = "input.entry == 'Quantiles'",
+                     helpText("Enter the judgements in the table below,
                             one column per expert. Enter lower plausible limits in the first row,
                             upper plausible limits in the last row, and quantile values in between, 
                             corresponding to the cumulative probabilities."),
-                   uiOutput("EnterJudgements")
-                 
+                     uiOutput("EnterQuantiles"),
+                     fluidRow(
+                       column(3, downloadButton("saveQuantiles", "Download judgements") ),
+                       column(3, fileInput("loadQuantiles", label = NULL, 
+                                           buttonLabel = "Upload judgements") )
+                       
+                     )),
+                   conditionalPanel(
+                     condition = "input.entry == 'Roulette'",
+                     helpText("Enter the number of chips allocated to each bin, one row per expert. 
+                            The bins are defined to have equal size, starting and ending at the specified
+                            values in 'Parameter limits'. To fit distributions, 
+                              each expert must have at least three non-empty bins."),
+                     uiOutput("EnterChips"),
+                     fluidRow(
+                       column(3, downloadButton("saveChips", "Download judgements") ),
+                       column(3, fileInput("loadChips", label = NULL, 
+                                           buttonLabel = "Upload judgements") )
+                       
+                     )
                    ),
+                   helpText("You can save and load judgements as .csv files. 
+                 When loading a file, make sure the Input 
+                 method, Number of experts, Cumulative probabilities/Number of bins 
+                          and Parameter limits are correctly specified in the 
+                          control panel.")
+                   
+                   
+                   
+          ),
           tabPanel("PDF",
                    plotOutput("distPlot"),
-                   conditionalPanel(
-                     condition = "input.showfeedback == true",
-                     tableOutput('lpquantiles'))),
+                   fluidRow(
+                     column(4,
+                            tableOutput("bestFittingDistributions")
+                     ),
+                     column(4, 
+                            conditionalPanel(
+                              condition = "input.showfeedback == true",
+                              tableOutput('lpquantiles')))
+                   )
+          ),
           tabPanel("Tertiles",
                    plotOutput("Tertiles"),
                    helpText("The coloured bars divide the plausible range for each expert
@@ -126,117 +170,323 @@ if they have been provided,
   
   server <- shinyServer(function(input, output) {
     
-   
-    p <- reactive({
+    
+    pQuantile <- reactive({
       tryCatch(eval(parse(text = paste("c(",
                                        input$probs, ")"))),
-               error = function(e){c(NaN, NaN, NaN)})
+               error = function(e){NULL})
     })
     
-    lpweights <- reactive({
-      eval(parse(text=paste("c(",input$weights,")")))
-    })
-    
-    nExp <- reactive({
-      req(input$nExperts)
-      max(c(input$nExperts, 1))
-    })
-  
-    l <- reactive({
-      input$myvals[1, ] 
-    })
-    
-    u <- reactive({
-      as.numeric(utils::tail(input$myvals, 1))
-    })
-    
-    v <- reactive({
-      n <- nrow(input$myvals)
-      as.matrix(input$myvals[2:(n - 1), ])
-    })
-    
-    myfit <- reactive({
-      myfit <-fitdist(vals = v(),
-                     probs = p(),
-                     lower = l(),
-                     upper = u())
-    })
-    
-    output$setLPWeights <- renderUI({
-      textInput("weights", label = h5("Linear pool weights"), 
-                paste(rep(1, input$nExperts), collapse = ", "))
-    })
-    
-    output$EnterJudgements <- renderUI({
-      initialdf <- matrix(rep(1:(2 + length(p())), nExp()),
-                          2 + length(p()),
-                          nExp())
-      colnames(initialdf) <- LETTERS[1:nExp()]
-      rownames(initialdf) <- c("L", p(), "U")
-      
-      shinyMatrix::matrixInput(inputId = "myvals", value =  initialdf,
-                               class = "numeric",
-                               cols = list(names = TRUE),
-                               rows = list(names = TRUE))
-    })
-    
-   
-    quantileValues <- reactive({
-      values <- qlinearpool(myfit(), c(input$fq1, input$fq2), 
-                            d=input$dist, 
-                            w = lpweights())
-      data.frame(quantiles=c(input$fq1, input$fq2), values=values)
-      
-    }) 
-    output$lpquantiles <- renderTable({
-      quantileValues()
-    })
-    
-    output$distPlot <- renderPlot({
-      req(myfit()$ssq)
-      xlimits <- c(min(l()), max(u()))
-
-            if(is.null(input$lp)){
-        
-          print(makeGroupPlot(myfit(), pl = xlimits[1], 
-                              pu = xlimits[2], 
-                              d=input$dist,
-                              lwd = 1,
-                              xlab = "x",
-                              ylab = expression(f[X](x)),
-                              fs = input$fs))}else{
-        print(makeLinearPoolPlot(myfit(), xl = xlimits[1], 
-                                 xu = xlimits[2], 
-                                 d=input$dist, w = lpweights(), lwd = 1,
-                                 xlab = "x",
-                                 ylab = expression(f[X](x)), legend_full = input$leg ==1,
-                                 ql = quantileValues()[1, 2], 
-                                 qu = quantileValues()[2, 2],
-                                 addquantile = input$showfeedback,
-                                 fs = input$fs))
+    pChip <- reactive({
+      # Need at least 3 non-empty bins per expert
+      check <- apply(input$myChips > 0, 1, sum)
+      if(min(check) < 3 | min(input$myChips) < 0){
+        return(NULL)
+      }else{
+        rouletteP <- apply(input$myChips, 1, cumsum) /
+          matrix(apply(input$myChips, 1, sum), 
+                 ncol(input$myChips), nExp(), byrow = TRUE)
+        rownames(rouletteP) <- NULL
+        return(rouletteP)
       }
       
     })
     
+    lpweights <- reactive({
+      tryCatch(eval(parse(text=paste("c(",input$weights,")"))),
+               error = function(e){NULL})
+      
+    })
+    
+    fq <- reactive({
+      feedbackq <- tryCatch(eval(parse(text=paste("c(",input$fq,")"))),
+               error = function(e){NULL})
+      if(!is.null(feedbackq)){
+        if(min(feedbackq)<=0 | max(feedbackq)>=1 | length(feedbackq) !=2){
+          return(NULL)
+        }
+        if(length(feedbackq) == 2 & feedbackq[1] >= feedbackq[2]){
+          return(NULL)
+        }
+      }
+      return(feedbackq)
+      
+    })
+    
+    nExp <- reactive({
+      req(input$nExperts)
+      if(input$nExperts <=0 | !is.integer(input$nExperts)){
+        return(NULL)}else{
+          return(input$nExperts)
+        }
+      
+    })
+    
+    limits <- reactive({
+      tryCatch(eval(parse(text=paste("c(",input$limits,")"))),
+               error = function(e){NULL})
+    })
+    
+    boundaries <- reactive({
+      req(limits(), input$nBins)
+      
+      if(length(limits()) == 1){return(NULL)}
+      
+      if(is.integer(input$nBins) & input$nBins > 0 & limits()[1] < limits()[2]){
+        return(signif(seq(from = limits()[1],
+                          to = limits()[2],
+                          length = 1 + input$nBins),
+                      3))
+      }else{
+        return(NULL)
+      }
+      
+    })
+    
+    l <- reactive({
+      if(input$entry == "Quantiles"){
+        return(input$myvals[1, ])}
+      if(input$entry == "Roulette"){
+        return(boundaries()[1])}
+    })
+    
+    u <- reactive({
+      if(input$entry == "Quantiles"){
+        return(input$myvals[nrow(input$myvals), ])}
+      if(input$entry == "Roulette"){
+        return(boundaries()[1 + input$nBins])}
+    })
+    
+    vQuantile <- reactive({
+      n <- nrow(input$myvals)
+      as.matrix(input$myvals[2:(n - 1), ])
+    })
+    
+    vChip <- reactive({
+      req(boundaries())
+      matrix(boundaries()[2:(input$nBins +1)],
+             input$nBins,
+             input$nExperts)
+    })
+    
+    
+    myfitQuantile <- reactive({
+      req(pQuantile(), vQuantile(), l(), u())
+      fitdist(vals = vQuantile(),
+              probs = pQuantile(),
+              lower = l(),
+              upper = u())
+    })
+    
+    myfitChip <- reactive({
+      if(is.null(pChip())){return(NULL)}else{
+      return(fitdist(vals = vChip(),
+              probs = pChip(),
+              lower = l(),
+              upper = u()))}
+    })
+    
+    myfit <- reactive({
+      if(input$entry == "Quantiles"){mf <- myfitQuantile()}
+      if(input$entry == "Roulette"){mf <- myfitChip()}
+      mf
+    })
+    
+    output$setLPWeights <- renderUI({
+      req(nExp())
+      textInput("weights", label = h5("Linear pool weights"), 
+                paste(rep(1, nExp()), collapse = ", "))
+    })
+    
+    output$EnterQuantiles <- renderUI({
+      
+      shinyMatrix::matrixInput(inputId = "myvals", value =  initialVals(),
+                               class = "numeric",
+                               cols = list(names = TRUE),
+                               rows = list(names = TRUE),
+                               paste = TRUE,
+                               copy = TRUE)
+    })
+    
+    newFile <- reactiveValues(chips = TRUE,
+                              quantiles = TRUE)
+    
+    observeEvent(input$loadQuantiles,{
+      newFile$quantiles <- FALSE
+    }, priority = 1
+    )
+    
+    observeEvent(input$loadChips,{
+      newFile$chips <- FALSE
+    }
+    )
+    
+    initialChips <- reactive({
+      req(boundaries(), input$nBins, nExp())
+      
+      inFile <- input$loadChips
+      if (is.null(inFile) | isolate(newFile$chips)){
+        initialdf <- matrix(0, nExp(), input$nBins)
+      }else{
+        initialdf <- as.matrix(utils::read.csv(inFile$datapath, row.names = 1))
+        newFile$chips <- TRUE
+        if(nrow(initialdf) != nExp() | ncol(initialdf) != input$nBins){
+          showNotification("Make sure selected Number of experts and selected Number of bins
+            match the numbers of rows and columns in the input file. Then try 
+                     uploading the file again.", 
+                           type = "error",
+                           duration = 60)
+          initialdf <- matrix(0, nExp(), input$nBins)
+        }
+      }
+      rownames(initialdf) <- LETTERS[1:nExp()]
+      
+      colnames(initialdf)<- paste0("(",
+                                   boundaries()[1:input$nBins],
+                                   "-",
+                                   boundaries()[2:(1 + input$nBins)], "]")
+      initialdf
+      
+    })
+    
+    initialVals <- reactive({
+      
+      inFile <- input$loadQuantiles
+      if (is.null(inFile) | isolate(newFile$quantiles)){
+        initialdf <- matrix(rep(1:(2 + length(pQuantile())), nExp()),
+                            2 + length(pQuantile()),
+                            nExp())
+      }else{
+        initialdf <- as.matrix(utils::read.csv(inFile$datapath, row.names = 1))
+        newFile$quantiles <- TRUE
+        if(nrow(initialdf) != (2 + length(pQuantile())) |
+           ncol(initialdf) != nExp()){
+          showNotification("Check that the dimensions and row/column headings of the table in the input file
+        match those displayed in the table here. Adjust the Number of experts and/or Cumulative probabilities
+        as appropriate, then try uploading the file again.", 
+                           type = "error",
+                           duration = 60)
+          initialdf <- matrix(rep(1:(2 + length(pQuantile())), nExp()),
+                              2 + length(pQuantile()),
+                              nExp())
+        }
+      }
+      
+      colnames(initialdf) <- LETTERS[1:nExp()]
+      rownames(initialdf) <- c("L", pQuantile(), "U")
+      initialdf
+      
+    })
+    
+    output$EnterChips <- renderUI({
+      
+      shinyMatrix::matrixInput(inputId = "myChips", value =  initialChips(),
+                               class = "numeric",
+                               cols = list(names = TRUE),
+                               rows = list(names = TRUE),
+                               paste = TRUE,
+                               copy = TRUE)
+    })
+    
+    
+    quantileValues <- reactive({
+
+      req(lpweights(), myfit(), fq())
+      values <- qlinearpool(myfit(), fq(), 
+                            d=input$dist, 
+                            w = lpweights())
+      data.frame(quantiles = fq(), values=values)
+      
+    }) 
+    output$lpquantiles <- renderTable({
+      req(quantileValues())
+      quantileValues()
+    })
+    
+    output$bestFittingDistributions <- renderTable({
+      req(myfit(), nExp())
+      df <- data.frame(expert = LETTERS[1:nrow(myfit()$best.fitting)],
+                       bf = myfit()$best.fitting[, 1])
+      
+      colnames(df) <- c("expert", "best fit")
+      df
+    })
+    
+    output$setPDFxaxisLimits <- renderUI({
+      req(input$myvals, boundaries())
+      if(input$entry == "Quantiles"){
+        initialRange <- range(input$myvals)
+      }
+      if(input$entry == "Roulette"){
+        initialRange <- range(boundaries())
+      }
+      textInput("xlimPDF", label = h5("x-axis limits"), 
+                paste(initialRange, collapse = ", "))
+    })
+    
+    xlimPDF <- reactive({
+      tryCatch(eval(parse(text = paste("c(", input$xlimPDF, ")"))),
+               error = function(e){NULL})
+      
+    })
+    
+    output$distPlot <- renderPlot({
+      req(myfit(), lpweights(), fq(), xlimPDF(), input$fs)
+      xlimits <- xlimPDF()
+      
+      if(is.null(input$lp)){
+        
+        print(makeGroupPlot(myfit(), pl = xlimits[1], 
+                            pu = xlimits[2], 
+                            d=input$dist,
+                            lwd = 1,
+                            xlab = "x",
+                            ylab = expression(f[X](x)),
+                            fs = input$fs))}else{
+                              print(makeLinearPoolPlot(myfit(), xl = xlimits[1], 
+                                                       xu = xlimits[2], 
+                                                       d=input$dist, w = lpweights(), lwd = 1,
+                                                       xlab = "x",
+                                                       ylab = expression(f[X](x)), legend_full = input$leg ==1,
+                                                       ql = quantileValues()[1, 2], 
+                                                       qu = quantileValues()[2, 2],
+                                                       addquantile = input$showfeedback,
+                                                       fs = input$fs))
+                            }
+      
+    })
+    
     output$Tertiles <- renderPlot({
-      req(myfit())
+      req(myfit(), input$fs)
       tertilevals <- matrix(0, 3, input$nExperts)
       for(i in 1:input$nExperts){
-        tertilevals[, i] <- approx(c(0, p(), 1), 
-                            input$myvals[,  i],
-                            c(1/3, 0.5, 2/3))$y
+        if(input$entry == "Quantiles"){
+          tertilevals[, i] <- approx(c(0, pQuantile(), 1), 
+                                     input$myvals[,  i],
+                                     c(1/3, 0.5, 2/3))$y}
+        if(input$entry == "Roulette"){
+          tertilevals[, i] <- approx(pChip()[, i], 
+                                     vChip()[, i],
+                                     c(1/3, 0.5, 2/3))$y}
+        
       }
       plotTertiles(tertilevals, l(), u(), fs = input$fs)
       
     })
     
     output$Quartiles <- renderPlot({
-      req(myfit())
+      req(myfit(), input$fs)
       quartilevals <- matrix(0, 3, input$nExperts)
       for(i in 1:input$nExperts){
-        quartilevals[, i] <- approx(c(0, p(), 1), 
-                            input$myvals[,  i],
-                            c(0.25, 0.5, 0.75))$y
+        if(input$entry == "Quantiles"){
+          quartilevals[, i] <- approx(c(0, pQuantile(), 1), 
+                                      input$myvals[,  i],
+                                      c(0.25, 0.5, 0.75))$y}
+        if(input$entry == "Roulette"){
+          quartilevals[, i] <- approx(pChip()[, i], 
+                                      vChip()[, i],
+                                      c(0.25, 0.5, 0.75))$y}
+        
       }
       plotQuartiles(quartilevals, l(), u(), fs = input$fs)
       
@@ -245,6 +495,25 @@ if they have been provided,
     observeEvent(input$exit, {
       stopApp(myfit())
     })
+    
+    
+    output$saveQuantiles <- downloadHandler(
+      filename = function() {
+        paste('judgements-', Sys.Date(), '.csv', sep='')
+      },
+      content = function(file) {
+        utils::write.csv(input$myvals, file)
+      }
+    )
+    
+    output$saveChips <- downloadHandler(
+      filename = function() {
+        paste('judgements-', Sys.Date(), '.csv', sep='')
+      },
+      content = function(file) {
+        utils::write.csv(input$myChips, file)
+      }
+    )
     
     output$report <- downloadHandler(
       filename = function(){switch(input$outFormat,
@@ -261,7 +530,9 @@ if they have been provided,
                   tempReport, overwrite = TRUE)
         
         # Set up parameters to pass to Rmd document
-        params <- list(fit = myfit())
+        params <- list(fit = myfit(), 
+                       entry = input$entry, 
+                       chips = input$myChips)
         
         # Knit the document, passing in the `params` list, and eval it in a
         # child of the global environment (this isolates the code in the document
@@ -276,6 +547,7 @@ if they have been provided,
     
   })
   
+  
   ## run app 
-  runApp(list(ui=ui, server=server))
+  runApp(list(ui=ui, server=server), launch.browser = TRUE)
 }

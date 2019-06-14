@@ -163,7 +163,9 @@ elicitBivariate<- function(){
               fluidRow(
                 column(3, downloadButton("report", "Download report")
                 ),
-                column(2, offset = 1, actionButton("exit", "Quit")
+                column(3, downloadButton("downloadData", "Download sample")
+                ),
+                column(3, actionButton("exit", "Quit")
                 )
               )
               

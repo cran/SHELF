@@ -18,7 +18,7 @@ plotfit(myfit2, d = "beta", xl = 0, xu = 0.5)
 conc.prob <- matrix(0, 2, 2)
 conc.prob[1, 2] <- 0.8
 X <- copulaSample(myfit1, myfit2, cp = conc.prob, 
-                  n = 1000, d = c("Beta", "Beta"))
+                  n = 1000, d = c("beta", "beta"))
 
 ## ------------------------------------------------------------------------
 quantile(X[, 1], probs = c(0.25, 0.5, 0.75))
@@ -58,7 +58,7 @@ theta <- copulaSample(myfit1, myfit2, myfit3,
 conc.prob[2, 3] <- 0.9
 theta <- copulaSample(myfit1, myfit2, myfit3, 
                       cp = conc.prob, n = 1000, 
-                      d = rep("Beta", 3))
+                      d = rep("beta", 3))
 
 ## ------------------------------------------------------------------------
 GGally::ggpairs(data.frame(theta),

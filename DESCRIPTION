@@ -1,8 +1,8 @@
 Package: SHELF
 Type: Package
 Title: Tools to Support the Sheffield Elicitation Framework
-Version: 1.5.0
-Date: 2019-03-26
+Version: 1.6.0
+Date: 2019-06-12
 Author: Jeremy Oakley
 Maintainer: Jeremy Oakley <j.oakley@sheffield.ac.uk>
 Description: Implements various methods for eliciting a probability distribution
@@ -21,11 +21,12 @@ Depends: R (>= 3.5.0)
 RoxygenNote: 6.1.1
 Suggests: testthat, knitr, GGally
 Imports: ggplot2, grid, shiny, stats, graphics, tidyr, MASS, ggExtra,
-        gridExtra, scales, rmarkdown, grDevices, shinyMatrix, utils
+        gridExtra, scales, rmarkdown, grDevices, shinyMatrix, utils,
+        ggridges, Hmisc
 URL: https://github.com/OakleyJ/SHELF
 BugReports: https://github.com/OakleyJ/SHELF/issues
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2019-03-26 15:40:36 UTC; Jeremy
+Packaged: 2019-06-13 08:21:30 UTC; Jeremy
 Repository: CRAN
-Date/Publication: 2019-03-26 16:03:20 UTC
+Date/Publication: 2019-06-14 11:50:03 UTC
