@@ -4,8 +4,14 @@
 \alias{generateReport}
 \title{Generate a report to show the fitted distributions}
 \usage{
-generateReport(fit, output_format = "html_document", sf = 3,
-  expert = 1, view = TRUE)
+generateReport(
+  fit,
+  output_format = "html_document",
+  sf = 3,
+  expert = 1,
+  view = TRUE,
+  clean = TRUE
+)
 }
 \arguments{
 \item{fit}{An object of class \code{'elicitation'}.}
@@ -19,7 +25,9 @@ generateReport(fit, output_format = "html_document", sf = 3,
 \item{expert}{if the \code{fit} object contains judgements from multiple experts, the 
 single expert's distributions to be displayed.}
 
-\item{view}{whether to open the document after it has been compiled}
+\item{view}{set to \code{TRUE} to open the document after it has been compiled.}
+
+\item{clean}{set to \code{TRUE} to clean intermediate files that are created during rendering.}
 }
 \description{
 Renders an Rmarkdown document to display the density function of each fitted distribution, 

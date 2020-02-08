@@ -4,8 +4,7 @@
 \alias{feedback}
 \title{Report quantiles and probabilities from the fitted probability distributions}
 \usage{
-feedback(fit, quantiles = NA, values = NA, dist = "best", ex = NA,
-  sf = 3)
+feedback(fit, quantiles = NA, values = NA, dist = "best", ex = NA, sf = 3)
 }
 \arguments{
 \item{fit}{An object of class \code{elicitation}.}
@@ -37,7 +36,7 @@ distribution only.}
 %% ~Describe the value returned %% If it is a LIST, use
 
 \item{fitted.quantiles }{Fitted quantiles for each expert}
-\item{fitted.probs }{Fitted probabilities for each expert}
+\item{fitted.probabilities }{Fitted probabilities for each expert}
 \item{distributions}{The distribution used to calculate fitted
 probabilities/quantiles for each expert, if feedback is given for multiple
 experts.}

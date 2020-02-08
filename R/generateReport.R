@@ -10,7 +10,8 @@
 #' @param sf number of significant figures to be displayed for the fitted parameters.
 #' @param expert if the \code{fit} object contains judgements from multiple experts, the 
 #' single expert's distributions to be displayed.
-#' @param view whether to open the document after it has been compiled
+#' @param view set to \code{TRUE} to open the document after it has been compiled.
+#' @param clean set to \code{TRUE} to clean intermediate files that are created during rendering.
 #' @examples
 #' \dontrun{
 #' # One expert, with elicited probabilities
@@ -24,13 +25,15 @@
 #' }
 #' @export
 generateReport <- function(fit, output_format = "html_document",
-                           sf = 3, expert = 1, view = TRUE){
+                           sf = 3, expert = 1, view = TRUE,
+                           clean = TRUE){
     
     path <- rmarkdown::render(input = 
                      system.file("elicitationReportFile", "elicitationSummary.Rmd",
                                  package="SHELF"),
                    output_format = output_format,
-                   output_dir = getwd())
+                   output_dir = getwd(),
+                   clean = clean)
     message("File saved to ", path)
     
     if(view){system2("open", shQuote(path))}
