@@ -25,6 +25,7 @@ elicitMultiple <- function(){
   
   dist<-c("hist", "normal", "t", "gamma", "lognormal", "logt","beta", "best")
   
+  # UI ----
   
   ui <- shinyUI(fluidPage(
     
@@ -38,39 +39,49 @@ elicitMultiple <- function(){
                        choices = c("Quantiles", "Roulette")),
           conditionalPanel(
             condition = "input.entry == 'Quantiles'",
-          textInput("probs", label = h5("Cumulative probabilities"), 
-                    value = "0.25, 0.5, 0.75")),
+            textInput("probs", label = h5("Cumulative probabilities"), 
+                      value = "0.25, 0.5, 0.75")),
           conditionalPanel(
             condition = "input.entry == 'Roulette'",
             numericInput("nBins", label = h5("Number of bins"), value = 10),
             textInput("limits", label = h5("Parameter limits"), value = "0, 100")
-                 )
+          )
+        ),
+        wellPanel(
+          selectInput("dist", label = "Distribution", 
+                      choices =  list(Histogram = "hist",
+                                      Normal = "normal", 
+                                      'Student-t' = "t",
+                                      Gamma = "gamma",
+                                      'Log normal' = "lognormal",
+                                      'Log Student-t' = "logt",
+                                      Beta = "beta",
+                                      'Mirror gamma' = "mirrorgamma",
+                                      'Mirror log normal' = "mirrorlognormal",
+                                      'Mirror log Student-t' = "mirrorlogt",
+                                      'Best fitting' = "best")
           ),
-          wellPanel(
-            selectInput("dist", label = "Distribution", 
-                        choices =  list(Histogram = "hist",
-                                        Normal = "normal", 
-                                        'Student-t' = "t",
-                                        Gamma = "gamma",
-                                        'Log normal' = "lognormal",
-                                        'Log Student-t' = "logt",
-                                        Beta = "beta", 
-                                        'Best fitting' = "best")),
-            uiOutput("setPDFxaxisLimits"),
+          checkboxInput("excludeLogT", "Exclude log-t and mirror log-t from best fit", TRUE),
+          uiOutput("setPDFxaxisLimits"),
           checkboxGroupInput("lp", label = h5("Linear pool"), 
                              choices = list("Display linear pool" = 1)),
           conditionalPanel(
             condition = "input.lp == true",
             uiOutput("setLPWeights"),
-          radioButtons("leg", label = h5("Linear pool legend"),
-                       choices = list("full" = 1, "reduced" = 2), selected = 1 ),
-          checkboxInput("showfeedback", label = "Show feedback", value = FALSE),
-          conditionalPanel(
-            condition = "input.showfeedback == true",
-            textInput("fq", label = h5("Feedback quantiles"), 
-                      value = "0.05, 0.95")
+            radioButtons("leg", label = h5("Linear pool legend"),
+                         choices = list("full" = 1, "reduced" = 2), selected = 1 ),
+            checkboxInput("showfeedback", label = "Show feedback", value = FALSE),
+            conditionalPanel(
+              condition = "input.showfeedback == true",
+              textInput("fq", label = h5("Feedback quantiles"), 
+                        value = "0.05, 0.95")
             )
-          )
+          ),
+          
+          textInput("xLabel", label = h5("Parameter (x-axis) label"), 
+                    value = "x")
+          
+          
         )
         
       ),
@@ -84,7 +95,8 @@ elicitMultiple <- function(){
                                                  'Word' = "word_document"))
             ),
             column(3, offset = 1, 
-                   numericInput("fs", label = "Font size", value = 12)
+                   numericInput("fs", label = "Font size",
+                                value = 16)
             )),
           fluidRow(
             column(3, downloadButton("report", "Download report")
@@ -140,6 +152,10 @@ elicitMultiple <- function(){
                    plotOutput("distPlot"),
                    fluidRow(
                      column(4,
+                            downloadButton('downloadDensities',
+                                           "Download plot")),
+                     
+                     column(4,
                             tableOutput("bestFittingDistributions")
                      ),
                      column(4, 
@@ -154,19 +170,30 @@ elicitMultiple <- function(){
 into three equally likely regions, as specified by each expert's tertiles. Each expert's median
 is shown by a dashed line. The tertiles displayed will either be the elicited tertiles, if they have been provided,
 or estimates obtained by linear interpolation of the elicited probabilities, with zero probability assumed
-outside the plausible range.")),
+outside the plausible range."),
+                   fluidRow(
+                     column(4,
+                            downloadButton('downloadTertiles',
+                                           "Download plot")))
+          ),
           tabPanel("Quartiles",
                    plotOutput("Quartiles"),
                    helpText("The coloured bars divide the plausible range for each expert
 into four equally likely regions, as specified by each expert's quartiles. The quartiles displayed will either be the elicited quartiles,
 if they have been provided,
                             or estimates obtained by linear interpolation of the elicited probabilities, with zero probability assumed
-                            outside the plausible range."))
+                            outside the plausible range."),
+                   fluidRow(
+                     column(4,
+                            downloadButton('downloadQuartiles',
+                                           "Download plot")))
+          )
         )
         
       )
     )
   ))
+  # Server ----
   
   server <- shinyServer(function(input, output) {
     
@@ -200,7 +227,7 @@ if they have been provided,
     
     fq <- reactive({
       feedbackq <- tryCatch(eval(parse(text=paste("c(",input$fq,")"))),
-               error = function(e){NULL})
+                            error = function(e){NULL})
       if(!is.null(feedbackq)){
         if(min(feedbackq)<=0 | max(feedbackq)>=1 | length(feedbackq) !=2){
           return(NULL)
@@ -275,15 +302,20 @@ if they have been provided,
       fitdist(vals = vQuantile(),
               probs = pQuantile(),
               lower = l(),
-              upper = u())
+              upper = u(),
+              expertnames = colnames(input$myvals),
+              excludelogt = input$excludeLogT)
     })
     
     myfitChip <- reactive({
       if(is.null(pChip())){return(NULL)}else{
-      return(fitdist(vals = vChip(),
-              probs = pChip(),
-              lower = l(),
-              upper = u()))}
+        return(fitdist(vals = vChip(),
+                       probs = pChip(),
+                       lower = l(),
+                       upper = u(),
+                       expertnames = rownames(input$myChips),
+                       excludelogt = input$excludeLogT)
+        )}
     })
     
     myfit <- reactive({
@@ -291,6 +323,15 @@ if they have been provided,
       if(input$entry == "Roulette"){mf <- myfitChip()}
       mf
     })
+    
+    expertNames <- reactive({
+      if(input$entry == "Quantiles"){
+        en <- colnames(input$myvals)}
+      if(input$entry == "Roulette"){
+        en <- rownames(input$myChips)}
+      en
+    })
+    
     
     output$setLPWeights <- renderUI({
       req(nExp())
@@ -302,7 +343,8 @@ if they have been provided,
       
       shinyMatrix::matrixInput(inputId = "myvals", value =  initialVals(),
                                class = "numeric",
-                               cols = list(names = TRUE),
+                               cols = list(names = TRUE,
+                                           editableNames = TRUE),
                                rows = list(names = TRUE),
                                paste = TRUE,
                                copy = TRUE)
@@ -356,6 +398,7 @@ if they have been provided,
         initialdf <- matrix(rep(1:(2 + length(pQuantile())), nExp()),
                             2 + length(pQuantile()),
                             nExp())
+        colnames(initialdf) <- LETTERS[1:nExp()]
       }else{
         initialdf <- as.matrix(utils::read.csv(inFile$datapath, row.names = 1))
         newFile$quantiles <- TRUE
@@ -372,7 +415,7 @@ if they have been provided,
         }
       }
       
-      colnames(initialdf) <- LETTERS[1:nExp()]
+      
       rownames(initialdf) <- c("L", pQuantile(), "U")
       initialdf
       
@@ -383,14 +426,15 @@ if they have been provided,
       shinyMatrix::matrixInput(inputId = "myChips", value =  initialChips(),
                                class = "numeric",
                                cols = list(names = TRUE),
-                               rows = list(names = TRUE),
+                               rows = list(names = TRUE,
+                                           editableNames = TRUE),
                                paste = TRUE,
                                copy = TRUE)
     })
     
     
     quantileValues <- reactive({
-
+      
       req(lpweights(), myfit(), fq())
       values <- qlinearpool(myfit(), fq(), 
                             d=input$dist, 
@@ -405,7 +449,7 @@ if they have been provided,
     
     output$bestFittingDistributions <- renderTable({
       req(myfit(), nExp())
-      df <- data.frame(expert = LETTERS[1:nrow(myfit()$best.fitting)],
+      df <- data.frame(expert = expertNames(),
                        bf = myfit()$best.fitting[, 1])
       
       colnames(df) <- c("expert", "best fit")
@@ -430,7 +474,7 @@ if they have been provided,
       
     })
     
-    output$distPlot <- renderPlot({
+    densityPlot <- function(){
       req(myfit(), lpweights(), fq(), xlimPDF(), input$fs)
       xlimits <- xlimPDF()
       
@@ -440,41 +484,56 @@ if they have been provided,
                             pu = xlimits[2], 
                             d=input$dist,
                             lwd = 1,
-                            xlab = "x",
+                            xlab = input$xLabel,
                             ylab = expression(f[X](x)),
-                            fs = input$fs))}else{
+                            fs = input$fs,
+                            expertnames = expertNames()))}else{
                               print(makeLinearPoolPlot(myfit(), xl = xlimits[1], 
                                                        xu = xlimits[2], 
                                                        d=input$dist, w = lpweights(), lwd = 1,
-                                                       xlab = "x",
+                                                       xlab = input$xlabel,
                                                        ylab = expression(f[X](x)), legend_full = input$leg ==1,
                                                        ql = quantileValues()[1, 2], 
                                                        qu = quantileValues()[2, 2],
                                                        addquantile = input$showfeedback,
-                                                       fs = input$fs))
+                                                       fs = input$fs,
+                                                       expertnames = expertNames()))
                             }
       
+    }
+    
+    output$distPlot <- renderPlot({
+      densityPlot()
     })
     
-    output$Tertiles <- renderPlot({
+    tertilePlot <- function(){
       req(myfit(), input$fs)
       tertilevals <- matrix(0, 3, input$nExperts)
       for(i in 1:input$nExperts){
         if(input$entry == "Quantiles"){
+          
           tertilevals[, i] <- approx(c(0, pQuantile(), 1), 
                                      input$myvals[,  i],
                                      c(1/3, 0.5, 2/3))$y}
         if(input$entry == "Roulette"){
+          
           tertilevals[, i] <- approx(pChip()[, i], 
                                      vChip()[, i],
                                      c(1/3, 0.5, 2/3))$y}
         
       }
-      plotTertiles(tertilevals, l(), u(), fs = input$fs)
+      plotTertiles(tertilevals, l(), u(), fs = input$fs,
+                   expertnames = expertNames(),
+                   xl = xlimPDF(),
+                   xlabel = input$xLabel)
       
+    }
+    
+    output$Tertiles <- renderPlot({
+      tertilePlot()
     })
     
-    output$Quartiles <- renderPlot({
+    quartilePlot <- function(){
       req(myfit(), input$fs)
       quartilevals <- matrix(0, 3, input$nExperts)
       for(i in 1:input$nExperts){
@@ -488,7 +547,15 @@ if they have been provided,
                                       c(0.25, 0.5, 0.75))$y}
         
       }
-      plotQuartiles(quartilevals, l(), u(), fs = input$fs)
+      plotQuartiles(quartilevals, l(), u(), fs = input$fs,
+                    expertnames = expertNames(),
+                    xl = xlimPDF(),
+                    xlabel = input$xLabel)
+      
+    }
+    
+    output$Quartiles <- renderPlot({
+      quartilePlot()
       
     })
     
@@ -514,6 +581,43 @@ if they have been provided,
         utils::write.csv(input$myChips, file)
       }
     )
+    
+    
+    output$downloadDensities = downloadHandler(
+      filename = 'expertDensities.png',
+      content = function(file) {
+        device <- function(..., width, height) {
+          grDevices::png(..., width = 5, height = 3,
+                         res = 300, units = "in")
+        }
+        ggsave(file, plot = densityPlot(),
+               device = device, width = 5,
+               height = 3, units = "in")
+      })
+    
+    output$downloadTertiles = downloadHandler(
+      filename = 'expertTertiles.png',
+      content = function(file) {
+        device <- function(..., width, height) {
+          grDevices::png(..., width = 5, height = 3,
+                         res = 300, units = "in")
+        }
+        ggsave(file, plot = tertilePlot(),
+               device = device, width = 5,
+               height = 3, units = "in")
+      })
+    
+    output$downloadQuartiles = downloadHandler(
+      filename = 'expertQuartiles.png',
+      content = function(file) {
+        device <- function(..., width, height) {
+          grDevices::png(..., width = 5, height = 3,
+                         res = 300, units = "in")
+        }
+        ggsave(file, plot = quartilePlot(),
+               device = device, width = 5,
+               height = 3, units = "in")
+      })
     
     output$report <- downloadHandler(
       filename = function(){switch(input$outFormat,

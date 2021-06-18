@@ -11,7 +11,9 @@
 #' @param upper a vector of upper plausible limits: one per expert
 #' @param fs font size to be used in the plot
 #' @param percentages set to \code{TRUE} to use percentages on the x-axis
-#'
+#' @param expertnames vector of experts' names
+#' @param xl vector of limits for x-axis
+#' @param xlabel x-axis label
 #
 
 #' @author Jeremy Oakley <j.oakley@@sheffield.ac.uk>
@@ -28,30 +30,41 @@
 #' }
 #' @export
 
-plotTertiles <- function(vals, lower, upper, fs = 12, percentages = FALSE){
+plotTertiles <- function(vals, lower, upper, fs = 12,
+                         percentages = FALSE,
+                         expertnames = NULL,
+                         xl = NULL,
+                         xlabel = "X"){
   
   low <- L <- T1 <- M <- T2 <- U <- enumber <- NULL # hack to pass CRAN check
   
   
   n.experts <- ncol(vals)
-  expert <-factor(LETTERS[1 : n.experts], levels = LETTERS[n.experts : 1])
   
+  if(is.null(expertnames)){
+  expert <-factor(LETTERS[1 : n.experts], levels = LETTERS[n.experts : 1])
+  }else{
+    expert <- factor(expertnames, levels = expertnames)
+  }
   cols <- gg_color_hue(3)
   
   df1 <- data.frame(cbind(lower, t(vals), upper))
   colnames(df1) <- c("L", "T1", "M", "T2", "U")
   df1$expert <- expert
-  df1$enumber <- n.experts:1
+  df1$enumber <- as.numeric(df1$expert)
   p1 <- ggplot(df1, aes(x = low, y = expert)) +
     geom_segment(aes(yend = expert, x=L, xend = T1), lwd = 10, col = cols[1])+
     geom_segment(aes(yend = expert, x=T1, xend = T2), lwd = 10, col = cols[2])+
     geom_segment(aes(yend = expert, x=T2, xend = U), lwd = 10, col = cols[3])+
     geom_segment(aes(y = enumber -0.15, yend = enumber + 0.15, x = M, xend =M),
                  lwd = 1, linetype = "dashed")+
-    labs(x = "X") +
+    labs(x = xlabel) +
     theme(text = element_text(size = fs)) 
   if(percentages){
     p1 <- p1 + scale_x_continuous(labels = scales::percent)
+  }
+  if(!is.null(xl)){
+    p1 <- p1 + xlim(xl)
   }
   p1  
 }

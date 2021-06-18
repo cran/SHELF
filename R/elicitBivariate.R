@@ -62,13 +62,16 @@ elicitBivariate<- function(){
                                                               Gamma = "gamma",
                                                               'Log normal' = "lognormal",
                                                               'Log Student-t' = "logt",
-                                                              Beta = "beta", 
+                                                              Beta = "beta",
+                                                              'Mirror gamma' = "mirrorgamma",
+                                                              'Mirror log normal' = "mirrorlognormal",
+                                                              'Mirror log Student-t' = "mirrorlogt",
                                                               'Best fitting' = "best"),
                                               #choiceValues = 1:8,
                                               selected = 1
                                   )),
                            column(4,conditionalPanel(
-                             condition = "input.dist1 == 't' || input.dist1 == 'logt'",
+                             condition = "input.dist1 == 't' || input.dist1 == 'logt' || input.dist1 == 'mirrorlogt'",
                              numericInput("tdf1", label = h5("Student-t degrees of freedom"),
                                           value = 3)
                            )
@@ -105,15 +108,18 @@ elicitBivariate<- function(){
                                                               'Student-t' = "t",
                                                               Gamma = "gamma",
                                                               'Log normal' = "lognormal",
-                                                              'Log Student - t' = "logt",
-                                                              Beta = "beta", 
+                                                              'Log Student-t' = "logt",
+                                                              Beta = "beta",
+                                                              'Mirror gamma' = "mirrorgamma",
+                                                              'Mirror log normal' = "mirrorlognormal",
+                                                              'Mirror log Student-t' = "mirrorlogt",
                                                               'Best fitting' = "best"),
                                               #choiceValues = 1:8,
                                               selected = 1
                                   )),
                            column(4,
                                   conditionalPanel(
-                                    condition = "input.dist2 == 't' || input.dist2 == 'logt'",
+                                    condition = "input.dist2 == 't' || input.dist2 == 'logt' || input.dist1 == 'mirrorlogt'",
                                     numericInput("tdf2", label = h5("degrees of freedom"),
                                                  value = 3)
                                     
@@ -231,7 +237,7 @@ elicitBivariate<- function(){
       #d = dist[as.numeric(input$radio1)]
      # dist<-c("hist","normal", "t", "gamma", "lognormal", "logt","beta", "best")
       suppressWarnings(plotfit(myfit1(), d = input$dist1,
-                               int = F, ql = 0.05, qu = 0.95,
+                                ql = 0.05, qu = 0.95,
                                xl = limits1()[1], xu = limits1()[2], 
                                fs = input$fs))
     
@@ -245,7 +251,7 @@ elicitBivariate<- function(){
         
       #  dist<-c("hist","normal", "t", "gamma", "lognormal", "logt","beta", "best")
         suppressWarnings(plotfit(myfit2(), d = input$dist2,
-                                 int = F, ql = 0.05, qu = 0.95,
+                                  ql = 0.05, qu = 0.95,
                                  xl = limits2()[1], xu = limits2()[2], 
                                  fs = input$fs))
       

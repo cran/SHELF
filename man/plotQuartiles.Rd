@@ -4,7 +4,15 @@
 \alias{plotQuartiles}
 \title{Plot elicted quartiles, median and plausible range for each expert}
 \usage{
-plotQuartiles(vals, lower, upper, fs = 12)
+plotQuartiles(
+  vals,
+  lower,
+  upper,
+  fs = 12,
+  expertnames = NULL,
+  xl = NULL,
+  xlabel = "X"
+)
 }
 \arguments{
 \item{vals}{a matrix of elicited tertiles and medians: one column per expert, first 
@@ -15,6 +23,12 @@ row is the 25th percentile, 2nd row is the median, last row is the 75th percenti
 \item{upper}{a vector of upper plausible limits: one per expert}
 
 \item{fs}{font size to be used in the plot}
+
+\item{expertnames}{vector of experts' names}
+
+\item{xl}{vector of limits for x-axis}
+
+\item{xlabel}{x-axis label}
 }
 \description{
 Displays a horizontal bar for each expert, to represent the expert's plausible range.

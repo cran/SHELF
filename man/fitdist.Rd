@@ -11,7 +11,8 @@ fitdist(
   upper = Inf,
   weights = 1,
   tdf = 3,
-  expertnames = NULL
+  expertnames = NULL,
+  excludelogt = FALSE
 )
 }
 \arguments{
@@ -41,6 +42,9 @@ weighted least squares is to be used in the parameter fitting.}
 t-distribution.}
 
 \item{expertnames}{Vector of names to use for each expert.}
+
+\item{excludelogt}{Set to TRUE to exclude log-t and mirror log-t when identifying
+best fitting distribution.}
 }
 \value{
 An object of class \code{elicitation}. This is a list containing the elements
@@ -59,6 +63,14 @@ degrees of freedom is not fitted; it is specified as an argument to
 \item{Beta}{Parameters of the fitted beta distributions. X
 is scaled to the interval [0,1] via Y = (X - \code{lower})/(\code{upper} -
 \code{lower}), and E(Y) = shape1 / (shape1 + shape2).} 
+\item{mirrorgamma}{Parameters of ('mirror') gamma distributions fitted to Y = \code{upper} - X. Note that E(Y) =
+shape / rate.}
+\item{mirrorlognormal}{Parameters of ('mirror') log normal distributions
+fitted to Y = \code{upper} - X.} 
+\item{mirrorlogt}{Parameters of ('mirror') log Student-t distributions fitted to Y = \code{upper} - X. 
+Note that (log(Y) - location) / scale has a standard t distribution. The
+degrees of freedom is not fitted; it is specified as an argument to
+\code{fitdist}.} 
 \item{ssq}{Sum of
 squared errors for each fitted distribution and expert. Each error is the
 difference between an elicited cumulative probability and the corresponding

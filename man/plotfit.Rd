@@ -7,7 +7,6 @@
 plotfit(
   fit,
   d = "best",
-  int = FALSE,
   xl = -Inf,
   xu = Inf,
   ql = NA,
@@ -22,7 +21,8 @@ plotfit(
   xlab = "x",
   ylab = expression(f[X](x)),
   legend_full = TRUE,
-  percentages = FALSE
+  percentages = FALSE,
+  returnPlot = FALSE
 )
 }
 \arguments{
@@ -30,15 +30,9 @@ plotfit(
 
 \item{d}{The distribution fitted to each expert's probabilities. Options are
 \code{"normal"}, \code{"t"}, \code{"gamma"}, \code{"lognormal"},
-\code{"logt"},\code{"beta"}, \code{"hist"} (for a histogram fit), and
+\code{"logt"},\code{"beta"}, \code{"mirrorgamma"},
+\code{"mirrorlognormal"}, \code{"mirrorlogt"} \code{"hist"} (for a histogram fit), and
 \code{"best"} (for best fitting)}
-
-\item{int}{Set \code{int = TRUE} to use interactive plotting (using the
-shiny package). If plotting for a single expert, the argument \code{d} is
-ignored, as distributions can be chosen within the display. If plotting for
-multiple experts, feedback quantiles are not displayed, and the argument
-\code{lp} is ignored, as the option to show a linear pool can be chosen
-within the display.}
 
 \item{xl}{The lower limit for the x-axis. The default is the 0.001 quantile
 of the fitted distribution (or the 0.001 quantile of a fitted normal
@@ -82,6 +76,8 @@ to be plotted with a different colour, and \code{ind = FALSE} for each expert to
 plotted with the same colour, reducing the legend size.}
 
 \item{percentages}{Set to \code{TRUE} to use percentages on the x-axis.}
+
+\item{returnPlot}{Set to \code{TRUE} to return the plot as a ggplot object.}
 }
 \description{
 Plots the fitted density function for one or more experts. Can also plot a
@@ -107,17 +103,13 @@ plotfit(myfit)
 # Plot a fitted beta distribution for expert 2, and show 5th and 95th percentiles
 plotfit(myfit, d = "beta", ql = 0.05, qu = 0.95, ex = 2)
 
-# Use interactive plotting for for expert 2, and show 5th and 95th percentiles
-plotfit(myfit, int = T, ex = 2)
 
 # Plot a linear pool, giving double weight to expert 1
 plotfit(myfit,  lp = T, lpw = c(2,1))
 
-# Use interactive plotting, giving double weight to expert 1, if a linear pool is displayed
-plotfit(myfit,  int = T, lpw = c(2,1))
 
 # Plot a linear pool, giving double weight to expert 1, 
-# show 5th and 95th percentiles, supress plotting of individual distributions, 
+# show 5th and 95th percentiles, surpress plotting of individual distributions, 
 # and force use of Beta distributions
 plotfit(myfit, d = "beta",  lp = T, lpw = c(2,1), ql = 0.05, qu = 0.95, ind=FALSE )
 }
