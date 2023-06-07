@@ -5,10 +5,23 @@
 #' additional feedback. Probabilities can be specified directly, or the roulette 
 #' elicitation method can be used. 
 #' 
+#' All input arguments are optional, and can be set/changed within the app itself.
 #' Click on the "Help" tab for instructions. Click the "Quit" button to exit the app and return
 #' the results from the \code{fitdist} command. Click "Download report" to generate a report
-#' of all the fitted distributions.
-#'
+#' of all the fitted distributions. 
+#' 
+#' @param lower A lower limit for the uncertain quantity X. 
+#' Will be ignored when fitting distributions that are not bounded below. Also sets 
+#' the lower limit for the grid in the roulette method.
+#' @param upper An upper limit for the uncertain quantity X. 
+#' Will be ignored when fitting distributions that are not bounded above. Also sets 
+#' the upper limit for the grid in the roulette method.
+#' @param gridheight The number of grid cells for each bin in the roulette method.
+#' @param nbins The number of bins used in the rouletted method.
+#' @param method Set to "roulette" for the app to display the roulette method by default.
+#' Any other string will display the general method by default.
+
+#' 
 #' @aliases elicit roulette 
 #' @return An object of class \code{elicitation}, which is returned once the 
 #' Quit button has been clicked. See \code{\link{fitdist}} for details.
@@ -22,8 +35,22 @@
 #' }
 #' @import shiny
 #' @export
-elicit<- function(){
+elicit<- function(lower = 0, upper = 100, gridheight = 10,
+                  nbins = 10, method = "general"){
+  
+  limits <- paste0(lower, ", ", upper)
+  if(method=="roulette"){
+    startingMethod <- 2
+    startingPanel <- "Roulette"}else{
+    startingMethod <- 1
+    startingPanel <- "PDF"
+  }
+  
+  
   runApp(list(
+  
+  # User interface ----  
+    
   ui = shinyUI(fluidPage(
     
     # Application title
@@ -33,11 +60,11 @@ elicit<- function(){
       sidebarPanel(
         wellPanel(
         textInput("limits", label = h5("Parameter limits"), 
-                  value = "0, 100"),
+                  value = limits),
         radioButtons("method", label = h5("Elicitation method"), 
                      choiceNames = list("General", "Roulette"),
                      choiceValues =  1:2,
-                     selected = 1)
+                     selected = startingMethod)
         ),
         conditionalPanel(
           condition = "input.method == 1",
@@ -54,9 +81,9 @@ elicit<- function(){
           wellPanel(
             h5("Roulette options"),
             numericInput("nBins", label = h5("Number of bins"),
-                         value = 10, min = 3),
+                         value = nbins, min = 3),
             numericInput("gridHeight", 
-                         label = h5("Grid height"), value = 10, min  = 1)
+                         label = h5("Grid height"), value = gridheight, min  = 1)
           )
         ),
             
@@ -212,31 +239,49 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
                            condition = "input.method == 1",
                            h5("Please select the roulette elicitation method")
                          )),
+                tabPanel("Compare group/RIO",
+                         helpText("If you are working with multiple experts, 
+                                  and you have elicited their judgements individually with the 
+                                  multiple experts app, you can download the judgements from that 
+                                  app as a .csv file, and upload it here. You will then see a comparison
+                                  between the individual judgements, a linear pool, and the distribution
+                                  you have elicited in this app."),
+                         fileInput("loadCSV", label = NULL, 
+                                   buttonLabel = "Upload judgements"),
+                         radioButtons("comparePlotType", label = h5("Plot Type"),
+                                      choices = c("Density functions" = "density",
+                                                  "Quartile judgements" = "quartiles",
+                                                  "Tertile judgements" = "tertiles")),
+                         plotOutput("compareRIO"),
+                         ),
                 tabPanel("Help", 
                          includeHTML(system.file("shinyAppFiles", "help.html",
                                                  package="SHELF"))
-                         )
+                         ),
+                selected = startingPanel
               )
       )
     )
   )),
+  
+  # Server ----
    
   server = function(input, output) {
     
-    # Parameter limits
+    # Parameter limits ----
     limits <- reactive({
       tryCatch(eval(parse(text = paste("c(", input$limits, ")"))),
                error = function(e){NULL})
     })
     
-    # Feedback quantiles
+    # Feedback quantiles ----
     fq <- reactive({
       tryCatch(eval(parse(text = paste("c(", input$fq, ")"))),
                error = function(e){NULL})
       
     })
     
-    # Feedback probabilities. Needs to know parameter limits
+    # Feedback probabilities. Needs to know parameter limits ----
     output$feedbackProbabilities <- renderUI({
       textInput("fp", label = h5("Feedback probabilities"), 
                 paste(limits(), collapse = ", "))
@@ -247,7 +292,7 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
       
     }) 
     
-    # Axes limits for pdf/cdf plots. Needs to know parameter limits
+    # Axes limits for pdf/cdf plots. Needs to know parameter limits ----
     output$setPDFxaxisLimits <- renderUI({
       textInput("xlimPDF", label = h5("x-axis limits"), 
                 paste(limits(), collapse = ", "))
@@ -267,7 +312,7 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
       
     })
     
-    # Elicited probabilities and values
+    # Elicited probabilities and values ----
     p <- reactive({
       gp <-  tryCatch(eval(parse(text = paste("c(", input$probs, ")"))),
                       error = function(e){NULL})
@@ -285,56 +330,40 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
       myv
     })
     
-    # Extract quartiles and tertiles by linear interpolation
+    # Extract quartiles and tertiles by linear interpolation ----
     # (Will be correct if elicited directly)
     m <- reactive({
-      req(p(), v())
-      approx(p(), v(), 0.5)$y
+      req(p(), v(), limits())
+      approx(c(0, p(), 1),
+             c(limits()[1], v(), limits()[2]),
+             0.5)$y
     })
     t1 <- reactive({
       req(p(), v(), limits())
-      if(min(p()) > 1/3){
-        xIn <- c(0, p())
-        yIn <- c(limits()[1], v())
-      }else{
-        xIn <- p()
-        yIn <- v()
-      }
-      approx(xIn, yIn, 1/3)$y
+      approx(c(0, p(), 1),
+             c(limits()[1], v(), limits()[2]),
+             1/3)$y
     })
     t2 <- reactive({
       req(p(), v(), limits())
-      if(max(p()) < 2/3){
-        xIn <- c(p(), 1)
-        yIn <- c(v(), limits()[2])
-      }else{
-        xIn <- p()
-        yIn <- v()
-      }
-      approx(xIn, yIn, 2/3)$y
+      approx(c(0, p(), 1),
+             c(limits()[1], v(), limits()[2]),
+             2/3)$y
     })
     Q1 <- reactive({
       req(p(), v(), limits())
-      if(min(p()) > 0.25){
-        xIn <- c(0, p())
-        yIn <- c(limits()[1], v())
-      }else{
-        xIn <- p()
-        yIn <- v()
-      }
-      approx(xIn, yIn, 0.25)$y
+      approx(c(0, p(), 1),
+             c(limits()[1], v(), limits()[2]),
+             0.25)$y
     })
     Q3 <- reactive({
       req(p(), v(), limits())
-      if(max(p()) < 0.75){
-        xIn <- c(p(), 1)
-        yIn <- c(v(), limits()[2])
-      }else{
-        xIn <- p()
-        yIn <- v()
-      }
-      approx(xIn, yIn, 0.75)$y
+      approx(c(0, p(), 1),
+             c(limits()[1], v(), limits()[2]),
+             0.75)$y
     })
+    
+    # Roulette ----
 
     # Extract number of bins and grid height, 
     # and grid positions for roulette method
@@ -405,7 +434,7 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
         rl$chips <- rep(0, input$nBins)}
     })
    
-    # Fit distributions to elicited judgements
+    # Fit distributions to elicited judgements ----
     myfit <- reactive({
       req(limits(), v(), p())
       fitdist(vals = v(), probs = p(), lower = limits()[1],
@@ -530,7 +559,7 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
       plotRoulette()
     })
     
-    # Feedback - get fitted quantiles/probabilities ...
+    # Feedback - get fitted quantiles/probabilities ----
     
     quantileValues <- reactive({
       req(fq(), myfit())
@@ -597,7 +626,25 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
       quantileValues()
     })
     
-    # Download individual plots
+    # Compare individual elicited judgements with RIO ----
+    
+    groupFit <- reactive({
+      file <- input$loadCSV
+      ext <- tools::file_ext(file$datapath)
+      
+      req(file)
+      validate(need(ext == "csv", "Please upload a csv file"))
+      readSHELFcsv(file$datapath)
+    })
+    
+    output$compareRIO <- renderPlot({
+      req(groupFit(), myfit())
+      compareGroupRIO(groupFit(), myfit(), type = input$comparePlotType,
+                      fs = input$fs,
+                      xlab = input$xLabel)
+    })
+    
+    # Download individual plots ----
     output$downloadDensities = downloadHandler(
       filename = 'fittedPDF.png',
       content = function(file) {

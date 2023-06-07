@@ -19,7 +19,7 @@ for variance parameters in a random effects meta-analysis model. R Shiny apps
 for most of the methods are included. 
 
 \tabular{ll}{ Package: \tab SHELF\cr Type: \tab Package\cr Version: \tab
-1.8.0\cr Date: \tab 2021-06-18\cr License: \tab GPL-2 | GPL-3\cr }
+1.9.0\cr Date: \tab 2023-05-31\cr License: \tab GPL-2 | GPL-3\cr }
 }
 \examples{
 \dontrun{
@@ -52,10 +52,10 @@ v <- matrix(c(30, 40, 50, 20, 25, 35), 3, 2)
 p <- c(0.25, 0.5, 0.75)
 myfit <- fitdist(vals = v, probs = p, lower = 0, upper = 100)
 # plot each distribution
-plotfit(myfit, int = TRUE)
+plotfit(myfit)
 
 ## plot the distribution for one expert only
-plotfit(myfit, int = TRUE, ex = 1)
+plotfit(myfit, ex = 1)
 
 ## Enter judgements in interactive mode
 elicit()

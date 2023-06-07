@@ -41,6 +41,7 @@
 #' plotted with the same colour, reducing the legend size.
 #' @param percentages Set to \code{TRUE} to use percentages on the x-axis.
 #' @param returnPlot Set to \code{TRUE} to return the plot as a ggplot object.
+#' @param showPlot Set to \code{FALSE} to suppress displaying the plot.
 #' @author Jeremy Oakley <j.oakley@@sheffield.ac.uk>
 #' @examples
 #' 
@@ -89,15 +90,144 @@ plotfit <- function(fit,
                     ylab = expression(f[X](x)),
                     legend_full = TRUE,
                     percentages = FALSE,
-                    returnPlot = FALSE){
+                    returnPlot = FALSE,
+                    showPlot = TRUE){
+  
+  # Error handling if fitted distribution is not available ----
+  
+  errorDist <- "Distribution has not been fitted. Requirements are"
+  errorL <- "- finite lower limit"
+  errorU <- "- finite upper limit"
+  errorP <- "- smallest elicited probability < 0.4\n- largest elicited probability > 0.6"
+  errorO <- "- at least one elicited probability, greater than 0 and less than 1"
   
 
-  if(d=="beta" & (min(fit$limits) == -Inf | max(fit$limits) == Inf )){stop("Parameter limits must be finite to fit a beta distribution")}
-  if(d=="gamma" & min(fit$limits) == -Inf ){stop("Lower parameter limit must be finite to fit a (shifted) gamma distribution")}
-  if(d=="lognormal" & min(fit$limits) == -Inf ){stop("Lower parameter limit must be finite to fit a (shifted) log normal distribution")}
-  if(d=="logt" & min(fit$limits) == -Inf ){stop("Lower parameter limit must be finite to fit a (shifted) log t distribution")}
-  if(is.na(ql)==F & (ql <0 | ql>1 )){stop("Lower feedback quantile must be between 0 and 1")}
-  if(is.na(qu)==F & (qu <0 | qu>1 )){stop("Upper feedback quantile must be between 0 and 1")}
+  distributions <- c("histogram", "normal", "Student-t", "gamma",
+                     "log normal", "log Student-t", "beta",
+                     "mirror gamma", "mirror log normal",
+                     "mirror log Student-t")
+  
+  if(is.na(ex)){
+    index <- !is.na(c(0, fit$ssq[1, ]))}else{
+      index <- !is.na(c(0, fit$ssq[ex, ]))
+    }
+  
+  
+  errorPlotBeta <- paste(errorDist, errorL, errorU, errorP,
+                         "Available fitted distributions are:",
+                         paste(distributions[index],
+                               collapse = ", "),sep = "\n")
+  errorPlotGamma <- paste(errorDist, errorL, errorO,
+                          "Available fitted distributions are:",
+                          paste(distributions[index],
+                                collapse = ", "), sep = "\n")
+  errorPlotLogNormal <- paste(errorDist, errorL, errorP,
+                              "Available fitted distributions are:",
+                              paste(distributions[index],
+                                    collapse = ", "), sep = "\n")
+  errorPlotMirrorGamma <- paste(errorDist, errorU, errorO,
+                                "Available fitted distributions are:",
+                                paste(distributions[index],
+                                      collapse = ", "), sep = "\n")
+  errorPlotMirrorLogNormal <-paste(errorDist, errorU, errorP,
+                                   "Available fitted distributions are:",
+                                   paste(distributions[index],
+                                         collapse = ", "), sep = "\n")
+  errorPlotNormal <- paste(errorDist, errorP,
+                           "Available fitted distributions are:",
+                           paste(distributions[index],
+                                 collapse = ", "), sep = "\n")
+  
+  # If single expert chosen, check whether selected distributions fitted for that expert
+  # If no expert specified, just check for any expert with missing selected distribution
+  
+  emptyPlot <- ggplot() +
+    theme_void(base_size = fs) +
+    xlim(0, 10)
+  
+  # If best fit chosen, find out if any parametric fits are available
+  # either for all experts, or for selected expert
+  # For histogram plot, need finite lower and upper limits
+  
+  if(is.na(ex)){
+    noBestFit <- sum(!is.na(fit$ssq)) == 0
+    noHistFit <- any(is.infinite(unlist(fit$limits)))
+  }else{
+    noBestFit <- sum(!is.na(fit$ssq[ex, ])) == 0
+    noHistFit <- any(is.infinite(unlist(fit$limits[ex, ])))
+  }
+  
+  # If distribution specified, check to see if it is available
+  
+  noFit <- TRUE
+  
+  if(d %in% colnames(fit$ssq)){
+    if(is.na(ex)){
+      noFit <- anyNA(fit$ssq[, d])
+    }else{
+      noFit <- anyNA(fit$ssq[ex, d])
+    }
+      
+  }
+  
+  if(d == "hist" & noHistFit){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                      label="Histogram not available.\nFinite lower and upper limits required.",
+                      hjust = 0, size = fs /2))
+  }
+  
+
+  
+  if(d=="best" & noBestFit){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                      label="No distributions fitted",
+                      hjust = 0, size = fs /2))
+    
+  }
+  
+  
+  
+  if(d=="beta" & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                           label=errorPlotBeta, hjust = 0, size = fs /2))
+  }
+  if((d=="normal" | d == "t") & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                           label=errorPlotNormal, hjust = 0, size = fs /2))
+  }
+  if(d=="gamma" & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                           label=errorPlotGamma, hjust = 0, size = fs / 2))
+  }
+  if((d=="lognormal" | d == "logt") & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                           label=errorPlotLogNormal, hjust = 0, size = fs /2))
+  }
+  if(d=="mirrorgamma" & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                           label=errorPlotMirrorGamma, hjust = 0, size = fs /2))
+  }
+  if((d=="mirrorlognormal" | d == "mirrorlogt") & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                           label=errorPlotMirrorLogNormal, hjust = 0, size = fs /2))
+  }
+    
+
+
+  # if(d=="beta" & (min(fit$limits) == -Inf | max(fit$limits) == Inf )){stop("Parameter limits must be finite to fit a beta distribution")}
+  # if(d=="gamma" & min(fit$limits) == -Inf ){stop("Lower parameter limit must be finite to fit a (shifted) gamma distribution")}
+  # if(d=="lognormal" & min(fit$limits) == -Inf ){stop("Lower parameter limit must be finite to fit a (shifted) log normal distribution")}
+  # if(d=="logt" & min(fit$limits) == -Inf ){stop("Lower parameter limit must be finite to fit a (shifted) log t distribution")}
+  # if(is.na(ql)==F & (ql <0 | ql>1 )){stop("Lower feedback quantile must be between 0 and 1")}
+  # if(is.na(qu)==F & (qu <0 | qu>1 )){stop("Upper feedback quantile must be between 0 and 1")}
   
   theme_set(theme_grey(base_size = fs))
   theme_update(plot.title = element_text(hjust = 0.5))
@@ -107,7 +237,8 @@ plotfit <- function(fit,
     if(xu == Inf & max(fit$limits[,2]) < Inf){xu <- max(fit$limits[,2]) }
       p1 <- suppressWarnings(makeGroupPlot(fit, xl, xu, d, lwd, xlab, ylab,
                                            expertnames = rownames(fit$Normal)))
-      print(p1)
+      if(showPlot){print(p1)}
+      
       if(returnPlot){
         return(p1)
       }
@@ -130,7 +261,7 @@ plotfit <- function(fit,
                                               lwd, xlab, ylab, legend_full,
                                               expertnames = rownames(fit$Normal)
                                               )
-    print(p1)
+    if(showPlot){print(p1)}
     if(returnPlot){
       return(p1)
     }
@@ -149,7 +280,7 @@ plotfit <- function(fit,
                                                                  percentages)
                                             
                                       )
-    print(p1)
+    if(showPlot){print(p1)}
     if(returnPlot){
       return(p1)
     }
@@ -164,7 +295,7 @@ plotfit <- function(fit,
                                                   xu, ql, qu, sf, ex = 1,
                                                   lwd, xlab, ylab,
                                                   percentages))
-      print(p1)
+      if(showPlot){print(p1)}
       
       if(returnPlot){
         return(p1)
