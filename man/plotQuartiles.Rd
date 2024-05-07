@@ -2,7 +2,7 @@
 % Please edit documentation in R/plotQuartiles.R
 \name{plotQuartiles}
 \alias{plotQuartiles}
-\title{Plot elicted quartiles, median and plausible range for each expert}
+\title{Plot elicited quartiles, median and plausible range for each expert}
 \usage{
 plotQuartiles(
   vals,

@@ -8,7 +8,7 @@
 #' 
 #' @param fit An object of class \code{elicitation}.
 #' @param d The distribution fitted to each expert's probabilities. Options are
-#' \code{"normal"}, \code{"t"}, \code{"gamma"}, \code{"lognormal"},
+#' \code{"normal"}, \code{"t"}, \code{"skewnormal"}, \code{"gamma"}, \code{"lognormal"},
 #' \code{"logt"},\code{"beta"}, \code{"mirrorgamma"},
 #' \code{"mirrorlognormal"}, \code{"mirrorlogt"} \code{"hist"} (for a histogram fit), and
 #' \code{"best"} (for best fitting)
@@ -18,6 +18,8 @@
 #' @param xu The upper limit for the x-axis. The default is the 0.999 quantile
 #' of the fitted distribution (or the 0.999 quantile of a fitted normal
 #' distribution, if a histogram fit is chosen).
+#' @param yl The lower limit for the y-axis. Default value is 0.
+#' @param yu The upper limit for the y-axis. Will be set automatically if not specified.
 #' @param ql A lower quantile to be indicated on the density function plot.
 #' Only displayed when plotting the density function for a single expert.
 #' @param qu An upper quantile to be indicated on the density function plot.
@@ -76,7 +78,9 @@
 plotfit <- function(fit, 
                     d = "best",
                     xl = -Inf, 
-                    xu = Inf, 
+                    xu = Inf,
+                    yl = 0,
+                    yu = NA,
                     ql = NA, 
                     qu = NA, 
                     lp = FALSE, 
@@ -100,9 +104,11 @@ plotfit <- function(fit,
   errorU <- "- finite upper limit"
   errorP <- "- smallest elicited probability < 0.4\n- largest elicited probability > 0.6"
   errorO <- "- at least one elicited probability, greater than 0 and less than 1"
+  errorS <- "- at least three elicited probabilties"
   
 
-  distributions <- c("histogram", "normal", "Student-t", "gamma",
+  distributions <- c("histogram", "normal", "Student-t", "skew normal",
+                     "gamma",
                      "log normal", "log Student-t", "beta",
                      "mirror gamma", "mirror log normal",
                      "mirror log Student-t")
@@ -134,6 +140,10 @@ plotfit <- function(fit,
                                    paste(distributions[index],
                                          collapse = ", "), sep = "\n")
   errorPlotNormal <- paste(errorDist, errorP,
+                           "Available fitted distributions are:",
+                           paste(distributions[index],
+                                 collapse = ", "), sep = "\n")
+  errorPlotSkewNormal <- paste(errorDist, errorP, errorS,
                            "Available fitted distributions are:",
                            paste(distributions[index],
                                  collapse = ", "), sep = "\n")
@@ -199,6 +209,11 @@ plotfit <- function(fit,
              annotate("text",0,0,
                            label=errorPlotNormal, hjust = 0, size = fs /2))
   }
+  if(d=="skewnormal" & noFit ){
+    return(emptyPlot + 
+             annotate("text",0,0,
+                      label=errorPlotSkewNormal, hjust = 0, size = fs /2))
+  }
   if(d=="gamma" & noFit ){
     return(emptyPlot + 
              annotate("text",0,0,
@@ -237,6 +252,9 @@ plotfit <- function(fit,
     if(xu == Inf & max(fit$limits[,2]) < Inf){xu <- max(fit$limits[,2]) }
       p1 <- suppressWarnings(makeGroupPlot(fit, xl, xu, d, lwd, xlab, ylab,
                                            expertnames = rownames(fit$Normal)))
+      if(!is.na(yl) & !is.na(yu)){
+        p1 <- p1 + ylim(yl, yu)
+      }
       if(showPlot){print(p1)}
       
       if(returnPlot){
@@ -261,6 +279,9 @@ plotfit <- function(fit,
                                               lwd, xlab, ylab, legend_full,
                                               expertnames = rownames(fit$Normal)
                                               )
+    if(!is.na(yl) & !is.na(yu)){
+      p1 <- p1 + ylim(yl, yu)
+    }
     if(showPlot){print(p1)}
     if(returnPlot){
       return(p1)
@@ -280,6 +301,9 @@ plotfit <- function(fit,
                                                                  percentages)
                                             
                                       )
+    if(!is.na(yl) & !is.na(yu)){
+      p1 <- p1 + ylim(yl, yu)
+    }
     if(showPlot){print(p1)}
     if(returnPlot){
       return(p1)
@@ -295,6 +319,9 @@ plotfit <- function(fit,
                                                   xu, ql, qu, sf, ex = 1,
                                                   lwd, xlab, ylab,
                                                   percentages))
+      if(!is.na(yl) & !is.na(yu)){
+        p1 <- p1 + ylim(yl, yu)
+      }
       if(showPlot){print(p1)}
       
       if(returnPlot){

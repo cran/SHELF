@@ -1,5 +1,5 @@
 feedbackgroup <-
-function(fit, quantiles =  NA, values = NA, dist = "best", sfg = 3){
+function(fit, quantiles =  NA, values = NA, dist = "best", sfg ){
 	
 	
 	n.experts <- nrow(fit$limits)
@@ -7,12 +7,7 @@ function(fit, quantiles =  NA, values = NA, dist = "best", sfg = 3){
 	
 	distributions <- data.frame(matrix(0, nrow = 1, ncol = n.experts))
 	names(distributions) <- expertnames
-	distribution.names <- c("normal", "t", "gamma", "lognormal",
-	                        "logt", "beta",
-	                        "hist", "mirrorgamma", "mirrorlognormal",
-	                        "mirrorlogt")
 	
-
 	
 	if(is.na(quantiles[1]) == T ){
 		quantiles <- fit$probs[1,]		
@@ -31,13 +26,6 @@ function(fit, quantiles =  NA, values = NA, dist = "best", sfg = 3){
 	names(expert.probs) <- expertnames
 	
 	for(i in 1:n.experts){
-		d.index<- c(1:2)
-		if(fit$limits[i,1]>-Inf){
-			d.index <- c(1:5)
-			if(fit$limits[i,2]<Inf){
-			d.index <- c(1:6)
-			}
-		}
 		
 		if(dist == "best"){
 		  expertDist <- fit$best.fitting[i, 1]
@@ -48,7 +36,7 @@ function(fit, quantiles =  NA, values = NA, dist = "best", sfg = 3){
 		
 		distributions[1, i] <- expertDist
 		
-		temp <- feedbacksingle(fit, quantiles, values, ex = i)
+		temp <- feedbacksingle(fit, quantiles, values, ex = i, sf = sfg)
 		expert.quantiles[, i] <- temp$fitted.quantiles[, expertDist]
 		expert.probs[, i] <- temp$fitted.probabilities[, expertDist]
 	}
@@ -60,8 +48,8 @@ function(fit, quantiles =  NA, values = NA, dist = "best", sfg = 3){
 	# single expert case.
 	
 	# list(expert.quantiles = signif(expert.quantiles, sfg), expert.probs = signif(expert.probs, sfg), distributions = distributions)
-	list(fitted.quantiles = signif(expert.quantiles, sfg),
-	     fitted.probabilities = signif(expert.probs, sfg),
+	list(fitted.quantiles = expert.quantiles,
+	     fitted.probabilities = expert.probs,
 	     distributions = distributions)
 	
 }

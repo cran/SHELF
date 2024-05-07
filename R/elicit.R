@@ -22,7 +22,7 @@
 #' Any other string will display the general method by default.
 
 #' 
-#' @aliases elicit roulette 
+#' @aliases elicit roulette elicitQuartiles elicitTertiles
 #' @return An object of class \code{elicitation}, which is returned once the 
 #' Quit button has been clicked. See \code{\link{fitdist}} for details.
 #' @author Jeremy Oakley <j.oakley@@sheffield.ac.uk>
@@ -47,11 +47,11 @@ elicit<- function(lower = 0, upper = 100, gridheight = 10,
   }
   
   
-  runApp(list(
+  #runApp(list(
   
   # User interface ----  
     
-  ui = shinyUI(fluidPage(
+  ui <- shinyUI(fluidPage(
     
     # Application title
     titlePanel("SHELF: single distribution"),
@@ -98,6 +98,7 @@ elicit<- function(lower = 0, upper = 100, gridheight = 10,
                       choices =  list(Histogram = "hist",
                                       Normal = "normal", 
                                       'Student-t' = "t",
+                                      'Skew normal' = "skewnormal",
                                       Gamma = "gamma",
                                       'Log normal' = "lognormal",
                                       'Log Student-t' = "logt",
@@ -234,7 +235,10 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
                            fluidRow(
                              column(4,
                                     downloadButton('downloadRoulette',
-                                                   "Download plot")))),
+                                                   "Download plot")),
+                             column(4,
+                                    downloadButton('downloadRouletteCSV',
+                                                   "Download allocation (csv)")))),
                          conditionalPanel(
                            condition = "input.method == 1",
                            h5("Please select the roulette elicitation method")
@@ -262,11 +266,11 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
               )
       )
     )
-  )),
+  ))
   
   # Server ----
    
-  server = function(input, output) {
+  server <- function(input, output) {
     
     # Parameter limits ----
     limits <- reactive({
@@ -436,10 +440,17 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
    
     # Fit distributions to elicited judgements ----
     myfit <- reactive({
-      req(limits(), v(), p())
+      req(limits(), v(), p(), input$tdf)
+      
+      check <- checkJudgementsValid(probs = p(), vals = v(),
+                           tdf = input$tdf,
+                           lower = limits()[1],
+                           upper= limits()[2])
+      if(check$valid == TRUE){
       fitdist(vals = v(), probs = p(), lower = limits()[1],
               upper = limits()[2], 
               tdf = input$tdf)
+      }
     })
     
     # All plots have separate functions, so can be called from 
@@ -696,14 +707,32 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
     output$downloadRoulette = downloadHandler(
       filename = 'roulette.png',
       content = function(file) {
-        device <- function(..., width, height) {
-          grDevices::png(..., width = 5, height = 3,
-                         res = 300, units = "in")
-        }
-        ggsave(file, plot = plotRoulette(),
-               device = device, width = 5,
-               height = 3, units = "in")
+       # device <- function(..., width, height) {
+        #  grDevices::png(..., width = 5, height = 3,
+        #                 res = 300, units = "in")
+        #}
+        #ggsave(file, plot = plotRoulette(),
+         #      device = device, width = 5,
+          #     height = 3, units = "in")
+        grDevices::png(file)
+        plotRoulette()
+        grDevices::dev.off()
       })
+    
+    # Download roulette allocation as csv
+    
+    output$downloadRouletteCSV <- downloadHandler(
+      filename = function() {
+        paste('roulette-', Sys.Date(), '.csv', sep='')
+      },
+      content = function(file) {
+        rouletteCSV <- data.frame(bins = paste0("(",bin.left(),
+                                               ", ",bin.right(),"]"),
+                                 probs = rl$chips)
+                                 
+        utils::write.csv(rouletteCSV, file)
+      }
+    )
     
     # Download R Markdown report
     output$report <- downloadHandler(
@@ -721,7 +750,20 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
                   tempReport, overwrite = TRUE)
         
         # Set up parameters to pass to Rmd document
-        params <- list(fit = myfit())
+        if(input$method==1){
+          params <- list(fit = myfit(), roulette = FALSE)
+        }
+        
+        
+        # Include roulette allocation
+        
+        if(input$method==2){
+          params <- list(fit = myfit(),
+                         bin.left = bin.left(),
+                         bin.right = bin.right(),
+                         chips = rl$chips,
+                         roulette = TRUE)
+        }
         
         # Knit the document, passing in the `params` list, and eval it in a
         # child of the global environment (this isolates the code in the document
@@ -740,5 +782,7 @@ into four equally likely regions, as specified by the quartiles. The quartiles d
     }) 
     
   }
-  ), launch.browser = TRUE)
+  #), launch.browser = TRUE)
+  shinyApp(ui, server, options = list(launch.browser = TRUE))
 }
+

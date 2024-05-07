@@ -52,6 +52,8 @@ An object of class \code{elicitation}. This is a list containing the elements
 \item{Student.t}{Parameters of the fitted t distributions. Note that (X -
 location) / scale has a standard t distribution. The degrees of freedom is
 not fitted; it is specified as an argument to \code{fitdist}.}
+\item{Skewnormal}{Parameters of the fitted skew-normal distribution. The skew-normal
+distribution is implemented using the sn package. See sn::dsn for details.}
 \item{Gamma}{Parameters of the fitted gamma distributions. Note that E(X - \code{lower}) =
 shape / rate.} 
 \item{Log.normal}{Parameters of the fitted log normal
@@ -77,7 +79,7 @@ difference between an elicited cumulative probability and the corresponding
 fitted cumulative probability.} 
 \item{best.fitting}{The best fitting
 distribution for each expert, determined by the smallest sum of squared
-errors.} 
+errors. Note that with three judgements only, this is likely to be the skew-normal, as this is a three parameter distribution. } 
 \item{vals}{The elicited values used to fit the distributions.}
 \item{probs}{The elicited probabilities used to fit the distributions.}
 \item{limits}{The lower and upper limits specified by each expert (+/- Inf

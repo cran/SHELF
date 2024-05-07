@@ -19,7 +19,7 @@ fit.dead <- fitdist(vals = v.dead, probs = p1, lower = 0, upper = 1)
 ## -----------------------------------------------------------------------------
 fit.good$Beta
 
-## ---- , fig.height = 4, fig.width = 5, fig.pos="h", fig.align="center"--------
+## ----, fig.height = 4, fig.width = 5, fig.pos="h", fig.align="center"---------
 d.fit <- fitDirichlet(fit.good, fit.seql, fit.dead,
                   categories = c("Good outcome","Sequel","Dead"),
                   n.fitted = "opt")
@@ -27,7 +27,7 @@ d.fit <- fitDirichlet(fit.good, fit.seql, fit.dead,
 ## -----------------------------------------------------------------------------
 feedbackDirichlet(d.fit, quantiles = c(0.1, 0.5, 0.9))
 
-## ---- fig.height = 4, fig.width = 5, fig.pos="h", fig.align="center"----------
+## ----fig.height = 4, fig.width = 5, fig.pos="h", fig.align="center"-----------
 d.fit <- fitDirichlet(fit.good, fit.seql, fit.dead,
                   categories = c("Good outcome","Sequel","Dead"),
                   n.fitted = "min")

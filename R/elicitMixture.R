@@ -69,6 +69,7 @@ elicitMixture <- function(){
                                          choices =  list(Histogram = "hist",
                                                          Normal = "normal", 
                                                          'Student-t' = "t",
+                                                         'Skew normal' = "skewnormal",
                                                          Gamma = "gamma",
                                                          'Log normal' = "lognormal",
                                                          'Log Student-t' = "logt",
@@ -352,6 +353,8 @@ elicitMixture <- function(){
       Py[1, 1] <- 1 - sum(Py[1, -1 ])
       rownames(Py) <- "probability"
       colnames(Py) <- paste0("Y=", 1:input$nY)
+      
+      
       Py
     })
     
@@ -476,9 +479,7 @@ elicitMixture <- function(){
       shinyMatrix::matrixInput(inputId = "extensionProbs", value =  initialPy(),
                                class = "numeric",
                                cols = list(names = TRUE, editableNames = TRUE),
-                               rows = list(names = TRUE),
-                               paste = TRUE,
-                               copy = TRUE)
+                               rows = list(names = TRUE))
       
     })
     
@@ -487,9 +488,7 @@ elicitMixture <- function(){
       shinyMatrix::matrixInput(inputId = "myvals", value =  initialVals(),
                                class = "numeric",
                                cols = list(names = TRUE),
-                               rows = list(names = TRUE),
-                               paste = TRUE,
-                               copy = TRUE)
+                               rows = list(names = TRUE))
     })
     
     output$EnterChips <- renderUI({
@@ -497,9 +496,7 @@ elicitMixture <- function(){
       shinyMatrix::matrixInput(inputId = "myChips", value =  initialChips(),
                                class = "numeric",
                                cols = list(names = TRUE),
-                               rows = list(names = TRUE),
-                               paste = TRUE,
-                               copy = TRUE)
+                               rows = list(names = TRUE))
     })
     
     output$setPDFxaxisLimits <- renderUI({
@@ -524,6 +521,7 @@ elicitMixture <- function(){
                     choices =  list(Histogram = "hist",
                                     Normal = "normal", 
                                     'Student-t' = "t",
+                                    'Skew normal' = "skewnormal",
                                     Gamma = "gamma",
                                     'Log normal' = "lognormal",
                                     'Log Student-t' = "logt",
@@ -542,14 +540,15 @@ elicitMixture <- function(){
     
     
     observeEvent(input$extensionProbs,{
-      pY <- input$extensionProbs[1, ]
-      if(min(pY<0) | max(pY>1) | sum(pY)!=1){
+      pY <- input$extensionProbs[1, ] 
+      # rounding errors in sum(pY) - 1
+      if(min(pY)<0 | max(pY)>1 | abs(sum(pY) - 1)>(10^-8)){
         showNotification("Make sure probabilities are between 0 and 1, and sum
                          to 1.",
                          type = "error",
                          duration  = 10)
         validPy$valid <- NULL
-        
+       
       }else{
         validPy$valid <- TRUE
       }
