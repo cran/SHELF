@@ -122,3 +122,31 @@ test_that("compare interval plot works", {
   p <- compareIntervals(myfit, interval = 0.5, showDist = FALSE)
   vdiffr::expect_doppelganger("compare interval plot", p)
 })
+
+test_that("survival model extrapolations works", {
+  skip_on_cran()
+  sdf <- survival::veteran[, c("time", "status", "trt")]
+  colnames(sdf) <- c("time", "event", "treatment")
+  sdf$treatment <- factor(sdf$treatment, labels = c("standard", "test"))
+  
+  p <- survivalModelExtrapolations(sdf, tEnd = 1000,
+                              group = "test",
+                              tTruncate = 100,
+                              showPlot = FALSE)
+  
+  vdiffr::expect_doppelganger("survival extrapolations plot", p$KMplot)
+})
+
+test_that("survival scenario testing works", {
+  skip_on_cran()
+  sdf <- survival::veteran[, c("time", "status", "trt")]
+  colnames(sdf) <- c("time", "event", "treatment")
+  sdf$treatment <- factor(sdf$treatment, labels = c("standard", "test"))
+  p <- survivalScenario(tLower = 0,tUpper = 150, expLower = 100, expUpper = 150,
+                   tTarget = 250, survDf = sdf,
+                   expGroup = "standard",
+                   showPlot = FALSE)
+  
+  
+  vdiffr::expect_doppelganger("survival scenario plot", p$KMplot)
+})
